@@ -18,8 +18,8 @@ The zero-shot results on the full test set of ModelNet40 and ScanObjectNN are:
 ### Installation
 Create a conda environment and install dependencies:
 ```bash
-conda create -n clipoint python=3.7
-conda activate clipoint
+conda create -n PointCLIPV2 python=3.7
+conda activate PointCLIPV2
 
 pip install -r requirements.txt
 
@@ -27,7 +27,7 @@ pip install -r requirements.txt
 conda install pytorch torchvision cudatoolkit
 
 # Install the modified dassl library (no need to re-build if the source code is changed)
-# Under CLIPoint/zeroshot_fewshot_cls folder:
+# Under PointCLIPV2/zeroshot_fewshot_cls folder:
 cd Dassl3D/
 python setup.py develop
 
