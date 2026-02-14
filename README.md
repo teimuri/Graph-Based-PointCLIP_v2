@@ -1,4 +1,5 @@
 # PointCLIP V2: Prompting CLIP and GPT for Powerful 3D Open-world Learning
+My update
 
 Official implementation of [PointCLIP V2: Prompting CLIP and GPT for Powerful 3D Open-world Learning](https://arxiv.org/abs/2211.11682).
 
