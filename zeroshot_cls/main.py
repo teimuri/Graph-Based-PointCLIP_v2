@@ -106,9 +106,34 @@ def main(args):
                 return
     # 2. STANDARD TRAINING MODE
     # If we are NOT in zero-shot mode, and we didn't pass --no-train, start training!
+    # 2. STANDARD TRAINING MODE
     elif not args.no_train:
-        print("Starting training loop...")
-        trainer.train()
+        print("Starting custom PyTorch training loop...")
+        
+        # 1. Put your GNN in training mode
+        trainer.model.train()
+        
+        # 2. Extract the dataloader and total epochs
+        train_loader = trainer.train_loader_x
+        max_epochs = cfg.OPTIM.MAX_EPOCH
+        
+        for epoch in range(max_epochs):
+            print(f"\n--- Epoch {epoch + 1}/{max_epochs} ---")
+            
+            for batch_idx, batch in enumerate(train_loader):
+                
+                # 3. Execute the forward/backward method we wrote earlier
+                loss_summary = trainer.forward_backward(batch)
+                
+                # 4. Print the loss and accuracy every 10 batches
+                if batch_idx % 10 == 0:
+                    loss = loss_summary["loss"]
+                    acc = loss_summary["acc"]
+                    print(f"Batch {batch_idx} | Loss: {loss:.4f} | Accuracy: {acc:.2f}%")
+            
+            # 5. Step the learning rate scheduler after every epoch
+            if trainer.sched is not None:
+                trainer.sched.step()
             
                 
 if __name__ == '__main__':
