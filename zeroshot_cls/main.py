@@ -134,8 +134,8 @@ def main(args):
 
             # 5. Step the learning rate scheduler after every epoch
             # print(trainer.sched)
-            # if trainer.sched is not None:
-            #     trainer.sched.step()
+            if trainer.sched is not None:
+                trainer.sched.step()
         trainer.test_zs()
             
                 
