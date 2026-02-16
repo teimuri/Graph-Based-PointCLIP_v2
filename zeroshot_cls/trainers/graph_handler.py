@@ -2,45 +2,46 @@ import torch
 from torch_geometric.data import Data
 from torch_geometric.nn import GCNConv, global_mean_pool
 import torch.nn as nn
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import GATConv, global_mean_pool, global_max_pool
+from torch_geometric.nn import GCNConv
 
 class aggergator_Graph(nn.Module):
-    def __init__(self, in_channels, heads=4, dropout=0.2):
+    def __init__(self, in_channels, hidden_dim=256):
         super().__init__()
-        self.dropout = dropout
+        # The GNN acts purely as a scoring mechanism
+        self.conv1 = GCNConv(in_channels, hidden_dim)
+        self.conv2 = GCNConv(hidden_dim, hidden_dim)
         
-        # 1. Graph Attention (GAT) Layers
-        # We use multiple heads, dividing in_channels by heads so the output dims remain constant
-        self.conv1 = GATConv(in_channels, in_channels // heads, heads=heads, concat=True)
-        self.norm1 = nn.LayerNorm(in_channels)
-        
-        self.conv2 = GATConv(in_channels, in_channels // heads, heads=heads, concat=True)
-        self.norm2 = nn.LayerNorm(in_channels)
-
-        # 2. Final projection layer to merge Max and Mean pooling
-        self.fc = nn.Linear(in_channels * 2, in_channels)
-        
-        # Keep this on CPU initially, we will move it to the correct device in forward()
+        # Projects the hidden graph features into a single scalar weight per view
+        self.scorer = nn.Linear(hidden_dim, 1)
         self.register_buffer('edge_index', self.get_view_edge_index())
 
     def get_view_edge_index(self):
-        # Assuming you have your edge logic here! 
-        # (Replace with your actual implementation)
+        # Your edge index logic here
         pass
 
     def forward(self, x, batch_size, num_views):
-        """
-        x: Image features of shape [Batch * Num_Views, Channels]
-        """
-        # 1. Reshape the flat tensor into [Batch, Num_Views, Channels]
-        x_reshaped = x.view(batch_size, num_views, -1)
+        device = x.device
         
-        # 2. Sum across the views (dimension 1) to get [Batch, Channels]
-        aggr_feat = x_reshaped.sum(dim=1)
+        # Shift edge indices for the batch
+        edge_offset = (torch.arange(batch_size, device=device) * num_views).view(-1, 1, 1)
+        batched_edge_index = (self.edge_index.unsqueeze(0) + edge_offset).transpose(0, 1).reshape(2, -1)
+        
+        # --- 1. Graph Message Passing (To learn view importance) ---
+        h = F.relu(self.conv1(x, batched_edge_index))
+        h = F.relu(self.conv2(h, batched_edge_index))
+        
+        # Calculate raw scores for each view
+        raw_scores = self.scorer(h).view(batch_size, num_views, 1)
+        
+        # Softmax ensures the weights for each object's 10 views sum to 1.0
+        attn_weights = F.softmax(raw_scores, dim=1)
+        
+        # --- 2. Weighted Sum of the ORIGINAL Features ---
+        x_reshaped = x.view(batch_size, num_views, -1)
+        aggr_feat = (x_reshaped * attn_weights).sum(dim=1)
         
         return aggr_feat
 
