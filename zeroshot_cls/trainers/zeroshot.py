@@ -96,6 +96,10 @@ class PointCLIPV2_ZS(TrainerX):
             # Normalize the final aggregated feature before comparing to text
             aggr_feat = aggr_feat / aggr_feat.norm(dim=-1, keepdim=True)
 
+
+            self.feat_store.append(aggr_feat)
+            self.label_store.append(label)
+            
             # Logits calculation (Notice we no longer multiply by 10 since we pooled, not concatenated)
             logits = 100. * aggr_feat @ self.text_feat.t()
         return logits
