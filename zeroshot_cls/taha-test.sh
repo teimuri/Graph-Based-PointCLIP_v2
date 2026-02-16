@@ -15,4 +15,5 @@ python main.py \
 --config-file configs/trainers/${TRAINER}/${CFG}.yaml \
 --output-dir output/${TRAINER}/${CFG}/${DATASET} \
 --no-train \
+--zero-shot \
 --post-search
