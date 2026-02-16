@@ -41,7 +41,7 @@ class aggergator_Graph(nn.Module):
         # Global mean pool averages the nodes for each graph in the batch
         aggr_feat = global_mean_pool(x, batch_idx) 
         
-        return aggr_feat.cpu()
+        return aggr_feat
 
     def get_view_edge_index(self):
         # Define the connections based on geometric proximity
