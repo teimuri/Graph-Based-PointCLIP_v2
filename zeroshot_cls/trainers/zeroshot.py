@@ -115,7 +115,7 @@ class PointCLIPV2_ZS(TrainerX):
             batch_size = pc.shape[0]
         return image_feat,batch_size
     def model_inference(self, pc, label=None):
-        image_feat,batch_size = commen_inference(pc)
+        image_feat,batch_size = self.commen_inference(pc)
         with torch.no_grad():
             # Realistic Projection
 
@@ -137,7 +137,7 @@ class PointCLIPV2_ZS(TrainerX):
         # 1. Unpack the batch from the DataLoader
         pc = batch["img"].cuda()
         label = batch["label"].cuda()
-        image_feat,batch_size = commen_inference(pc)
+        image_feat,batch_size = self.commen_inference(pc)
 
         # 2. Project 3D points to 2D images
         # images = self.real_proj(pc).type(self.dtype)
