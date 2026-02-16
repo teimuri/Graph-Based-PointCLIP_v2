@@ -81,11 +81,10 @@ class PointCLIPV2_ZS(TrainerX):
             param.requires_grad = True
 
         # 3. OPTIMIZER: Tell Dassl to only train the GNN
-        # Dassl looks for 'self.model' to build the optimizer, so we assign the GNN to it
         self.model = self.gnn_aggregator 
         
-        # Change these two lines:
-        self.optim = build_optimizer(self.model, cfg.OPTIM)
+        # Change this line to explicitly pass the parameters:
+        self.optim = build_optimizer(self.model, cfg.OPTIM, param_groups=self.model.parameters())
         self.sched = build_lr_scheduler(self.optim, cfg.OPTIM)
         
         # 4. Define the Loss Function (Cross-Entropy for classification)
