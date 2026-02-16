@@ -71,6 +71,24 @@ class PointCLIPV2_ZS(TrainerX):
         
         self.view_weights = torch.Tensor(best_prompt_weight['{}_{}_test_weights'.format(self.cfg.DATASET.NAME.lower(), self.cfg.MODEL.BACKBONE.NAME2)]).cuda()
         self.gnn_aggregator = aggergator_Graph(self.channel).to(self.dtype).cuda()
+
+        for param in self.visual_encoder.parameters():
+            param.requires_grad = False
+            
+        # (Optional but recommended) Turn on gradients specifically for the GNN
+        for param in self.gnn_aggregator.parameters():
+            param.requires_grad = True
+
+        # 3. OPTIMIZER: Tell Dassl to only train the GNN
+        # Dassl looks for 'self.model' to build the optimizer, so we assign the GNN to it
+        self.model = self.gnn_aggregator 
+        self.optim = self.build_optimizer(self.model)
+        self.sched = self.build_lr_scheduler(self.optim)
+        
+        # 4. Define the Loss Function (Cross-Entropy for classification)
+        self.criterion = torch.nn.CrossEntropyLoss()
+
+
     def real_proj(self, pc, imsize=224):
         img = self.get_img(pc).cuda()
         img = torch.nn.functional.interpolate(img, size=(imsize, imsize), mode='bilinear', align_corners=True)        
@@ -99,7 +117,46 @@ class PointCLIPV2_ZS(TrainerX):
 
             self.feat_store.append(aggr_feat)
             self.label_store.append(label)
-            
+
             # Logits calculation (Notice we no longer multiply by 10 since we pooled, not concatenated)
             logits = 100. * aggr_feat @ self.text_feat.t()
         return logits
+
+    def forward_backward(self, batch):
+        # 1. Unpack the batch from the DataLoader
+        pc = batch["pointcloud"].cuda()
+        label = batch["label"].cuda()
+        batch_size = pc.shape[0]
+
+        # 2. Project 3D points to 2D images
+        images = self.real_proj(pc).type(self.dtype)
+
+        # 3. Extract CLIP features WITHOUT tracking gradients (Saves VRAM!)
+        with torch.no_grad():
+            image_feat = self.visual_encoder(images)
+            image_feat = image_feat / image_feat.norm(dim=-1, keepdim=True)
+            image_feat = image_feat.type(self.dtype)
+
+        # 4. GNN Aggregation (Gradients are tracked here!)
+        aggr_feat = self.gnn_aggregator(image_feat, batch_size, self.num_views)
+        aggr_feat = aggr_feat / aggr_feat.norm(dim=-1, keepdim=True)
+
+        # 5. Calculate Logits
+        logits = 100. * aggr_feat @ self.text_feat.t()
+
+        # 6. Calculate Loss
+        loss = self.criterion(logits, label)
+
+        # 7. Backward Pass & Optimizer Step (Dassl handles the zero_grad() and step() here)
+        self.model_backward_and_update(loss)
+
+        # 8. Calculate accuracy for the training logger
+        # (Assuming you imported the accuracy function from earlier)
+        acc = accuracy(logits.detach(), label, topk=(1,))[0]
+
+        # Return a dictionary so Dassl can print the loss/accuracy to your terminal
+        loss_summary = {
+            "loss": loss.item(),
+            "acc": acc,
+        }
+        return loss_summary

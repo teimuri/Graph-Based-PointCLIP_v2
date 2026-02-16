@@ -96,16 +96,19 @@ def main(args):
 
     # zero-shot classification
     if args.zero_shot:
-        trainer.test_zs()
-        
-    # view weight and prompt search
-    vweights = best_param.best_prompt_weight['{}_{}_test_weights'.format(cfg.DATASET.NAME.lower(), cfg.MODEL.BACKBONE.NAME2)]
-    prompts = best_param.best_prompt_weight['{}_{}_test_prompts'.format(cfg.DATASET.NAME.lower(), cfg.MODEL.BACKBONE.NAME2)]
-    if args.post_search:
-        if args.zero_shot:
-            prompts, image_feature = search_prompt_zs(cfg, vweights, searched_prompt=prompts)
-            #vweights = search_weights_zs(cfg, prompts, vweights, image_feature)
-            return
+            trainer.test_zs()
+            
+            vweights = best_param.best_prompt_weight['{}_{}_test_weights'.format(cfg.DATASET.NAME.lower(), cfg.MODEL.BACKBONE.NAME2)]
+            prompts = best_param.best_prompt_weight['{}_{}_test_prompts'.format(cfg.DATASET.NAME.lower(), cfg.MODEL.BACKBONE.NAME2)]
+            
+            if args.post_search:
+                prompts, image_feature = search_prompt_zs(cfg, vweights, searched_prompt=prompts)
+                return
+    # 2. STANDARD TRAINING MODE
+    # If we are NOT in zero-shot mode, and we didn't pass --no-train, start training!
+    elif not args.no_train:
+        print("Starting training loop...")
+        trainer.train()
             
                 
 if __name__ == '__main__':
