@@ -29,7 +29,7 @@ class aggergator_Graph(nn.Module):
         for i in range(batch_size):
             offset = i * num_views
             edge_indices.append(self.edge_index + offset)
-        batched_edge_index = torch.cat(edge_indices, dim=1)
+        batched_edge_index = torch.cat(edge_indices, dim=1).cuda()
 
         # Apply GCN layers
         x = self.conv1(x, batched_edge_index)
