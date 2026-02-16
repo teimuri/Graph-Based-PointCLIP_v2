@@ -131,7 +131,6 @@ class PointCLIPV2_ZS(TrainerX):
 
     def forward_backward(self, batch):
         # 1. Unpack the batch from the DataLoader
-        print("BATCH KEYS:", batch.keys())
         pc = batch["img"].cuda()
         label = batch["label"].cuda()
         batch_size = pc.shape[0]
