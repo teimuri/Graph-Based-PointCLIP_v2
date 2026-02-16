@@ -70,7 +70,7 @@ class PointCLIPV2_ZS(TrainerX):
         self.label_store = []
         
         self.view_weights = torch.Tensor(best_prompt_weight['{}_{}_test_weights'.format(self.cfg.DATASET.NAME.lower(), self.cfg.MODEL.BACKBONE.NAME2)]).cuda()
-        self.gnn_aggregator = aggergator_Graph(self.channel).cuda()
+        self.gnn_aggregator = aggergator_Graph(self.channel).to(self.dtype).cuda()
     def real_proj(self, pc, imsize=224):
         img = self.get_img(pc).cuda()
         img = torch.nn.functional.interpolate(img, size=(imsize, imsize), mode='bilinear', align_corners=True)        
