@@ -108,11 +108,11 @@ def main(args):
     # If we are NOT in zero-shot mode, and we didn't pass --no-train, start training!
     # 2. STANDARD TRAINING MODE
     elif not args.no_train:
-        trainer.test_zs()
+        # trainer.test_zs()
         print("Starting custom PyTorch training loop...")
         
         # 1. Put your GNN in training mode
-        # trainer.model.train()
+        trainer.model.train()
         
         # 2. Extract the dataloader and total epochs
         train_loader = trainer.train_loader_x
