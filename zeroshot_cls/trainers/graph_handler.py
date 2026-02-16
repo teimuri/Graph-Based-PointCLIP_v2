@@ -3,43 +3,72 @@ from torch_geometric.data import Data
 from torch_geometric.nn import GCNConv, global_mean_pool
 import torch.nn as nn
 
-class aggergator_Graph(nn.Module):
-    def __init__(self, in_channels):
-        super().__init__()
-        # A simple 2-layer Graph Convolutional Network
-        self.conv1 = GCNConv(in_channels, in_channels)
-        self.conv2 = GCNConv(in_channels, in_channels)
-        self.relu = nn.ReLU()
-        self.edge_index = self.get_view_edge_index().cuda()
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch_geometric.nn import GATConv, global_mean_pool, global_max_pool
 
+class aggergator_Graph(nn.Module):
+    def __init__(self, in_channels, heads=4, dropout=0.2):
+        super().__init__()
+        self.dropout = dropout
+        
+        # 1. Graph Attention (GAT) Layers
+        # We use multiple heads, dividing in_channels by heads so the output dims remain constant
+        self.conv1 = GATConv(in_channels, in_channels // heads, heads=heads, concat=True)
+        self.norm1 = nn.LayerNorm(in_channels)
+        
+        self.conv2 = GATConv(in_channels, in_channels // heads, heads=heads, concat=True)
+        self.norm2 = nn.LayerNorm(in_channels)
+
+        # 2. Final projection layer to merge Max and Mean pooling
+        self.fc = nn.Linear(in_channels * 2, in_channels)
+        
+        # Keep this on CPU initially, we will move it to the correct device in forward()
+        self.register_buffer('edge_index', self.get_view_edge_index())
+
+    def get_view_edge_index(self):
+        # Assuming you have your edge logic here! 
+        # (Replace with your actual implementation)
+        pass
 
     def forward(self, x, batch_size, num_views):
         """
         x: Image features of shape [Batch * Num_Views, Channels]
         """
-        x = x.cuda()
-        # 1. Message Passing: Let views talk to their neighbors
-        # We process the whole batch of graphs at once
-        # Create a batch vector to keep track of which nodes belong to which object in the batch
-        batch_idx = torch.arange(batch_size).repeat_interleave(num_views).to(x.device)
+        device = x.device
         
-        # Repeat the edge_index for each item in the batch
-        # This shifts the node indices so graph 2's nodes don't connect to graph 1's nodes
-        edge_indices = []
-        for i in range(batch_size):
-            offset = i * num_views
-            edge_indices.append(self.edge_index + offset)
-        batched_edge_index = torch.cat(edge_indices, dim=1).cuda()
-
-        # Apply GCN layers
+        # --- 1. Vectorized Graph Batching ---
+        # Create batch index: [0,0,0..., 1,1,1..., etc.]
+        batch_idx = torch.arange(batch_size, device=device).repeat_interleave(num_views)
+        
+        # Shift edge indices for the whole batch instantly (No for-loop needed!)
+        edge_offset = (torch.arange(batch_size, device=device) * num_views).view(-1, 1, 1)
+        batched_edge_index = (self.edge_index.unsqueeze(0) + edge_offset).transpose(0, 1).reshape(2, -1)
+        
+        # --- 2. Layer 1: GAT + Norm + ReLU + Dropout + Residual ---
+        identity = x
         x = self.conv1(x, batched_edge_index)
-        x = self.relu(x)
-        x = self.conv2(x, batched_edge_index)
+        x = self.norm1(x)
+        x = F.relu(x)
+        x = F.dropout(x, p=self.dropout, training=self.training)
+        x = x + identity  # Residual skip connection
         
-        # 2. Aggregation (Pooling)
-        # Combine the 10 view nodes into 1 single feature vector per 3D object
-        # Global mean pool averages the nodes for each graph in the batch
-        aggr_feat = global_mean_pool(x, batch_idx) 
+        # --- 3. Layer 2: GAT + Norm + ReLU + Dropout + Residual ---
+        identity = x
+        x = self.conv2(x, batched_edge_index)
+        x = self.norm2(x)
+        x = F.relu(x)
+        x = F.dropout(x, p=self.dropout, training=self.training)
+        x = x + identity 
+
+        # --- 4. Rich Aggregation (Mean + Max Pooling) ---
+        x_mean = global_mean_pool(x, batch_idx)
+        x_max = global_max_pool(x, batch_idx)
+        
+        # Concatenate and project back to original channel dimension
+        aggr_feat = torch.cat([x_mean, x_max], dim=1)
+        aggr_feat = self.fc(aggr_feat)
         
         return aggr_feat
 
