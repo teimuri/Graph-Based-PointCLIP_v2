@@ -100,7 +100,7 @@ class PointCLIPV2_ZS(TrainerX):
         img = self.get_img(pc).cuda()
         img = torch.nn.functional.interpolate(img, size=(imsize, imsize), mode='bilinear', align_corners=True)        
         return img
-    def commen_inference(self, pc)
+    def commen_inference(self, pc):
         with torch.no_grad():
             # Realistic Projection
             images = self.real_proj(pc)            
