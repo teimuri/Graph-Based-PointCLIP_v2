@@ -25,6 +25,9 @@ class aggergator_Graph(nn.Module):
     def forward(self, x, batch_size, num_views):
         device = x.device
         
+        # ADD THIS LINE: Cast the FP16 CLIP features to FP32 for the GNN
+        x = x.to(torch.float32)
+        
         # Shift edge indices for the batch
         edge_offset = (torch.arange(batch_size, device=device) * num_views).view(-1, 1, 1)
         batched_edge_index = (self.edge_index.unsqueeze(0) + edge_offset).transpose(0, 1).reshape(2, -1)
