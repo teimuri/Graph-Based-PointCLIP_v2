@@ -1,5 +1,5 @@
 #!/bin/bash
-
+git pull
 # Path to dataset
 DATASET=modelnet40
 # DATASET=scanobjectnn
