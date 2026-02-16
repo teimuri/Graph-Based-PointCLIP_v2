@@ -10,9 +10,8 @@ class aggergator_Graph(nn.Module):
         self.conv1 = GCNConv(in_channels, in_channels)
         self.conv2 = GCNConv(in_channels, in_channels)
         self.relu = nn.ReLU()
-        
-        # Load our predefined edges and push to GPU
-        self.register_buffer('edge_index', self.get_view_edge_index())
+        self.edge_index = self.get_view_edge_index().cuda()
+
 
     def forward(self, x, batch_size, num_views):
         """
@@ -62,5 +61,5 @@ class aggergator_Graph(nn.Module):
         all_edges = edges + reverse_edges
         
         # Convert to PyTorch tensor of shape [2, num_edges]
-        self.edge_index = torch.tensor(all_edges, dtype=torch.long).t().contiguous()
-        return self.edge_index
+        edge_index = torch.tensor(all_edges, dtype=torch.long).t().contiguous()
+        return edge_index
