@@ -84,7 +84,7 @@ class PointCLIPV2_ZS(TrainerX):
         self.model = self.gnn_aggregator 
         
         # Change this line to explicitly pass the parameters:
-        self.optim = build_optimizer(self.model, cfg.OPTIM, param_groups=self.model.parameters())
+        self.optim = build_optimizer(self.model.parameters(), cfg.OPTIM)
         self.sched = build_lr_scheduler(self.optim, cfg.OPTIM)
         
         # 4. Define the Loss Function (Cross-Entropy for classification)
