@@ -18,7 +18,7 @@ class Textual_Encoder(nn.Module):
     def forward(self):
         prompts = best_prompt_weight['{}_{}_test_prompts'.format(self.cfg.DATASET.NAME.lower(), self.cfg.MODEL.BACKBONE.NAME2)]
         prompts = torch.cat([clip.tokenize(p) for p in prompts]).cuda()
-        text_feat = self.clip_model.encode_text(prompts).repeat(1, self.cfg.MODEL.PROJECT.NUM_VIEWS)
+        text_feat = self.clip_model.encode_text(prompts)
         return text_feat
 
 
