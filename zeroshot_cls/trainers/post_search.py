@@ -114,7 +114,7 @@ def search_prompt_zs(cfg, vweights, image_feature=None, searched_prompt=None, pr
 
                 if acc > best_acc:
                     prompts[ii] = gpt_sents[all_classes[ii]][jj]
-                    text_feat_ori[ii, :] = torch.Tensor(text_feat_lib[all_classes[ii]][jj]).cuda().repeat(1, cfg.MODEL.PROJECT.NUM_VIEWS)
+                    text_feat_ori[ii, :] = torch.Tensor(text_feat_lib[all_classes[ii]][jj]).cuda()
                     print('New best accuracy: {:.2f}, i-th class: {}, j-th sentence: {}'.format(acc, ii, jj))
                     best_acc = acc
     print('\nThe best prompt is: ')
