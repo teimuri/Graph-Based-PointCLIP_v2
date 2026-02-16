@@ -95,6 +95,6 @@ class PointCLIPV2_ZS(TrainerX):
             # Store for zero-shot
             self.feat_store.append(image_feat)
             self.label_store.append(label)
-                        
+            print(image_feat_w.shape)
             logits = 100. * image_feat_w @ self.text_feat.t()
         return logits
