@@ -156,7 +156,7 @@ class PointCLIPV2_ZS(TrainerX):
         aggr_feat = aggr_feat / aggr_feat.norm(dim=-1, keepdim=True)
         
         # 5. Calculate Logits (Ensure text_feat is cast to float32 to match aggr_feat)
-        logits = 100. * aggr_feat @ self.text_feat.detach().t()
+        logits = 100. * aggr_feat @ self.text_feat.detach().to(aggr_feat.dtype).t()
         # 6. Calculate Loss
         loss = self.criterion(logits, label)
 
