@@ -32,43 +32,15 @@ class aggergator_Graph(nn.Module):
         # (Replace with your actual implementation)
         pass
 
-    def forward(self, x, batch_size, num_views):
+def forward(self, x, batch_size, num_views):
         """
         x: Image features of shape [Batch * Num_Views, Channels]
         """
-        device = x.device
+        # 1. Reshape the flat tensor into [Batch, Num_Views, Channels]
+        x_reshaped = x.view(batch_size, num_views, -1)
         
-        # --- 1. Vectorized Graph Batching ---
-        # Create batch index: [0,0,0..., 1,1,1..., etc.]
-        batch_idx = torch.arange(batch_size, device=device).repeat_interleave(num_views)
-        
-        # Shift edge indices for the whole batch instantly (No for-loop needed!)
-        edge_offset = (torch.arange(batch_size, device=device) * num_views).view(-1, 1, 1)
-        batched_edge_index = (self.edge_index.unsqueeze(0) + edge_offset).transpose(0, 1).reshape(2, -1)
-        
-        # --- 2. Layer 1: GAT + Norm + ReLU + Dropout + Residual ---
-        identity = x
-        x = self.conv1(x, batched_edge_index)
-        x = self.norm1(x)
-        x = F.relu(x)
-        x = F.dropout(x, p=self.dropout, training=self.training)
-        x = x + identity  # Residual skip connection
-        
-        # --- 3. Layer 2: GAT + Norm + ReLU + Dropout + Residual ---
-        identity = x
-        x = self.conv2(x, batched_edge_index)
-        x = self.norm2(x)
-        x = F.relu(x)
-        x = F.dropout(x, p=self.dropout, training=self.training)
-        x = x + identity 
-
-        # --- 4. Rich Aggregation (Mean + Max Pooling) ---
-        x_mean = global_mean_pool(x, batch_idx)
-        x_max = global_max_pool(x, batch_idx)
-        
-        # Concatenate and project back to original channel dimension
-        aggr_feat = torch.cat([x_mean, x_max], dim=1)
-        aggr_feat = self.fc(aggr_feat)
+        # 2. Sum across the views (dimension 1) to get [Batch, Channels]
+        aggr_feat = x_reshaped.sum(dim=1)
         
         return aggr_feat
 
