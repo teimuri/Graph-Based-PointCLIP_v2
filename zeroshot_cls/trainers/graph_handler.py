@@ -18,9 +18,6 @@ class aggergator_Graph(nn.Module):
         self.scorer = nn.Linear(hidden_dim, 1)
         self.register_buffer('edge_index', self.get_view_edge_index())
 
-    def get_view_edge_index(self):
-        # Your edge index logic here
-        pass
 
     def forward(self, x, batch_size, num_views):
         device = x.device
