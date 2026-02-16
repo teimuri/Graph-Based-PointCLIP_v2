@@ -1,9 +1,6 @@
 import torch
 from torch_geometric.data import Data
 from torch_geometric.nn import GCNConv, global_mean_pool
-class graph_builder():
-
-
 import torch.nn as nn
 
 class aggergator_Graph(nn.Module):
