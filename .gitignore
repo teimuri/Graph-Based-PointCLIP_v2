@@ -1,2 +1,4 @@
-./zeroshot_cls/data
+zeroshot_cls/data
+zeroshot_cls/output
+zeroshot_cls/prompts
 **/__pycache__/
