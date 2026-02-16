@@ -101,7 +101,7 @@ def main(args):
     # view weight and prompt search
     vweights = best_param.best_prompt_weight['{}_{}_test_weights'.format(cfg.DATASET.NAME.lower(), cfg.MODEL.BACKBONE.NAME2)]
     prompts = best_param.best_prompt_weight['{}_{}_test_prompts'.format(cfg.DATASET.NAME.lower(), cfg.MODEL.BACKBONE.NAME2)]
-    raise ValueError(vweights.shape,prompts)
+    raise ValueError(vweights,prompts)
     if args.post_search:
         if args.zero_shot:
             prompts, image_feature = search_prompt_zs(cfg, vweights, searched_prompt=prompts)
