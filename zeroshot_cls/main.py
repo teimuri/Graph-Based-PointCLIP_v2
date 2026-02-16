@@ -132,6 +132,7 @@ def main(args):
                     print(f"Batch {batch_idx} | Loss: {loss:.4f} | Accuracy: {acc:.2f}%")
             
             # 5. Step the learning rate scheduler after every epoch
+            print(trainer.sched)
             if trainer.sched is not None:
                 trainer.sched.step()
             
