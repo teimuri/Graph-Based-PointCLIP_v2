@@ -17,6 +17,7 @@ class aggergator_Graph(nn.Module):
         """
         x: Image features of shape [Batch * Num_Views, Channels]
         """
+        x = x.cuda()
         # 1. Message Passing: Let views talk to their neighbors
         # We process the whole batch of graphs at once
         # Create a batch vector to keep track of which nodes belong to which object in the batch
@@ -40,7 +41,7 @@ class aggergator_Graph(nn.Module):
         # Global mean pool averages the nodes for each graph in the batch
         aggr_feat = global_mean_pool(x, batch_idx) 
         
-        return aggr_feat
+        return aggr_feat.cpu()
 
     def get_view_edge_index(self):
         # Define the connections based on geometric proximity
