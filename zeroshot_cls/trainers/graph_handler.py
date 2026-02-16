@@ -18,6 +18,7 @@ class aggergator_Graph(nn.Module):
         x: Image features of shape [Batch * Num_Views, Channels]
         """
         x = x.cuda()
+        x = x.to(torch.float32)
         # 1. Message Passing: Let views talk to their neighbors
         # We process the whole batch of graphs at once
         # Create a batch vector to keep track of which nodes belong to which object in the batch
