@@ -4,6 +4,7 @@ import torch.nn as nn
 
 from trainers.best_param import best_prompt_weight
 from trainers.mv_utils_zs import Realistic_Projection
+from trainers.graph_handler import aggergator_Graph
 from dassl.engine import TRAINER_REGISTRY, TrainerX
 
 class Textual_Encoder(nn.Module):
@@ -69,7 +70,7 @@ class PointCLIPV2_ZS(TrainerX):
         self.label_store = []
         
         self.view_weights = torch.Tensor(best_prompt_weight['{}_{}_test_weights'.format(self.cfg.DATASET.NAME.lower(), self.cfg.MODEL.BACKBONE.NAME2)]).cuda()
-
+        self.gnn_aggregator = aggergator_Graph(self.channel)
     def real_proj(self, pc, imsize=224):
         img = self.get_img(pc).cuda()
         img = torch.nn.functional.interpolate(img, size=(imsize, imsize), mode='bilinear', align_corners=True)        
@@ -86,15 +87,15 @@ class PointCLIPV2_ZS(TrainerX):
             image_feat = self.visual_encoder(images)
             
             image_feat = image_feat / image_feat.norm(dim=-1, keepdim=True)
-            
-            image_feat_w = image_feat.reshape(-1, self.num_views, self.channel) * self.view_weights.reshape(1, -1, 1)
-            image_feat_w = image_feat_w.reshape(-1, self.num_views * self.channel).type(self.dtype)
-                        
-            image_feat = image_feat.reshape(-1, self.num_views * self.channel)
+            image_feat = image_feat.reshape(-1, self.num_views, self.channel) * self.view_weights.reshape(1, -1, 1)
+            image_feat = image_feat.reshape(-1, self.channel).type(self.dtype) # Shape: [B * 10, C]
+            batch_size = pc.shape[0]
+            # Pass through the GNN (Outputs shape: [Batch, Channel])
+            aggr_feat = self.gnn_aggregator(image_feat, batch_size, self.num_views)
 
-            # Store for zero-shot
-            self.feat_store.append(image_feat)
-            self.label_store.append(label)
-            logits = 100. * image_feat_w @ self.text_feat.t()
-            print(logits.shape)
+            # Normalize the final aggregated feature before comparing to text
+            aggr_feat = aggr_feat / aggr_feat.norm(dim=-1, keepdim=True)
+
+            # Logits calculation (Notice we no longer multiply by 10 since we pooled, not concatenated)
+            logits = 100. * aggr_feat @ self.text_feat.t()
         return logits
