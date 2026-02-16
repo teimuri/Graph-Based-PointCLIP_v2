@@ -6,6 +6,7 @@ from trainers.best_param import best_prompt_weight
 from trainers.mv_utils_zs import Realistic_Projection
 from trainers.graph_handler import aggergator_Graph
 from dassl.engine import TRAINER_REGISTRY, TrainerX
+from dassl.optim import build_optimizer, build_lr_scheduler
 
 class Textual_Encoder(nn.Module):
     def __init__(self, cfg, classnames, clip_model):
@@ -82,8 +83,10 @@ class PointCLIPV2_ZS(TrainerX):
         # 3. OPTIMIZER: Tell Dassl to only train the GNN
         # Dassl looks for 'self.model' to build the optimizer, so we assign the GNN to it
         self.model = self.gnn_aggregator 
-        self.optim = self.build_optimizer(self.model)
-        self.sched = self.build_lr_scheduler(self.optim)
+        
+        # Change these two lines:
+        self.optim = build_optimizer(self.model, cfg.OPTIM)
+        self.sched = build_lr_scheduler(self.optim, cfg.OPTIM)
         
         # 4. Define the Loss Function (Cross-Entropy for classification)
         self.criterion = torch.nn.CrossEntropyLoss()
