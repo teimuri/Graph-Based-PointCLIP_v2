@@ -112,11 +112,11 @@ def main(args):
         print("Starting custom PyTorch training loop...")
         
         # 1. Put your GNN in training mode
-        trainer.model.train()
+        # trainer.model.train()
         
         # 2. Extract the dataloader and total epochs
         train_loader = trainer.train_loader_x
-        max_epochs = 1
+        max_epochs = 5
         
         for epoch in range(max_epochs):
             print(f"\n--- Epoch {epoch + 1}/{max_epochs} ---")
@@ -131,12 +131,12 @@ def main(args):
                     loss = loss_summary["loss"]
                     acc = loss_summary["acc"]
                     print(f"Batch {batch_idx} | Loss: {loss:.4f} | Accuracy: {acc:.2f}%")
-        trainer.test_zs()
 
             # 5. Step the learning rate scheduler after every epoch
             # print(trainer.sched)
             # if trainer.sched is not None:
             #     trainer.sched.step()
+        trainer.test_zs()
             
                 
 if __name__ == '__main__':
