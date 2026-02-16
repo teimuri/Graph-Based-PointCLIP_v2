@@ -90,7 +90,8 @@ def search_prompt_zs(cfg, vweights, image_feature=None, searched_prompt=None, pr
     image_feat_w = image_feat.type(clip_model.dtype)
     
     # Before search
-    logits = clip_model.logit_scale.exp() * image_feat_w @ text_feat.t() * 1.0    acc, _ = accuracy(logits, labels, topk=(1, 5))
+    logits = clip_model.logit_scale.exp() * image_feat_w @ text_feat.t() * 1.0
+    acc, _ = accuracy(logits, labels, topk=(1, 5))
     acc = (acc / image_feat.shape[0]) * 100
     print(f"=> Before search, zero-shot accuracy: {acc:.2f}")
     
