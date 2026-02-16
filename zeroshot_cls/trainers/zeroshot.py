@@ -100,9 +100,7 @@ class PointCLIPV2_ZS(TrainerX):
         img = self.get_img(pc).cuda()
         img = torch.nn.functional.interpolate(img, size=(imsize, imsize), mode='bilinear', align_corners=True)        
         return img
-    
-    def model_inference(self, pc, label=None):
-        
+    def commen_inference(self, pc)
         with torch.no_grad():
             # Realistic Projection
             images = self.real_proj(pc)            
@@ -115,6 +113,12 @@ class PointCLIPV2_ZS(TrainerX):
             image_feat = image_feat.reshape(-1, self.num_views, self.channel) * self.view_weights.reshape(1, -1, 1)
             image_feat = image_feat.reshape(-1, self.channel).type(self.dtype) # Shape: [B * 10, C]
             batch_size = pc.shape[0]
+        return image_feat,batch_size
+    def model_inference(self, pc, label=None):
+        image_feat,batch_size = commen_inference(pc)
+        with torch.no_grad():
+            # Realistic Projection
+
             # Pass through the GNN (Outputs shape: [Batch, Channel])
             aggr_feat = self.gnn_aggregator(image_feat, batch_size, self.num_views)
 
@@ -133,19 +137,19 @@ class PointCLIPV2_ZS(TrainerX):
         # 1. Unpack the batch from the DataLoader
         pc = batch["img"].cuda()
         label = batch["label"].cuda()
-        batch_size = pc.shape[0]
+        image_feat,batch_size = commen_inference(pc)
 
         # 2. Project 3D points to 2D images
-        images = self.real_proj(pc).type(self.dtype)
+        # images = self.real_proj(pc).type(self.dtype)
 
         # 3. Extract CLIP features WITHOUT tracking gradients
-        with torch.no_grad():
-            image_feat = self.visual_encoder(images)
-            image_feat = image_feat / image_feat.norm(dim=-1, keepdim=True)
+        # with torch.no_grad():
+        #     image_feat = self.visual_encoder(images)
+        #     image_feat = image_feat / image_feat.norm(dim=-1, keepdim=True)
             
-            # ADD THESE LINES to apply the view weights and cast to float32
-            image_feat = image_feat.reshape(-1, self.num_views, self.channel) * self.view_weights.reshape(1, -1, 1)
-            image_feat = image_feat.reshape(-1, self.channel).type(torch.float32)
+        #     # ADD THESE LINES to apply the view weights and cast to float32
+        #     image_feat = image_feat.reshape(-1, self.num_views, self.channel) * self.view_weights.reshape(1, -1, 1)
+        #     image_feat = image_feat.reshape(-1, self.channel).type(torch.float32)
 
         # 4. GNN Aggregation (Now receiving float32 weighted features)
         aggr_feat = self.gnn_aggregator(image_feat, batch_size, self.num_views)
