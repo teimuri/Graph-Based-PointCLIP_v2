@@ -157,7 +157,9 @@ class PointCLIPV2_ZS(TrainerX):
         loss = self.criterion(logits, label)
 
         # 7. Backward Pass & Optimizer Step (Dassl handles the zero_grad() and step() here)
-        self.model_backward_and_update(loss)
+        self.optim.zero_grad()
+        loss.backward()
+        self.optim.step()
 
         # 8. Calculate accuracy for the training logger
         # (Assuming you imported the accuracy function from earlier)
