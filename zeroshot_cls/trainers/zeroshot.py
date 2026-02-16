@@ -91,7 +91,7 @@ class PointCLIPV2_ZS(TrainerX):
             image_feat = image_feat.reshape(-1, self.channel).type(self.dtype) # Shape: [B * 10, C]
             batch_size = pc.shape[0]
             # Pass through the GNN (Outputs shape: [Batch, Channel])
-            aggr_feat = self.gnn_aggregator(image_feat, batch_size, self.num_views).cpu()
+            aggr_feat = self.gnn_aggregator(image_feat, batch_size, self.num_views)
 
             # Normalize the final aggregated feature before comparing to text
             aggr_feat = aggr_feat / aggr_feat.norm(dim=-1, keepdim=True)
