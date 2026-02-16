@@ -85,6 +85,7 @@ class PointCLIPV2_ZS(TrainerX):
             # Image features
             image_feat = self.visual_encoder(images)
             
+            print(image_feat.shape)
             image_feat = image_feat / image_feat.norm(dim=-1, keepdim=True)
             
             image_feat_w = image_feat.reshape(-1, self.num_views, self.channel) * self.view_weights.reshape(1, -1, 1)
@@ -95,6 +96,5 @@ class PointCLIPV2_ZS(TrainerX):
             # Store for zero-shot
             self.feat_store.append(image_feat)
             self.label_store.append(label)
-            print(image_feat_w.shape)
             logits = 100. * image_feat_w @ self.text_feat.t()
         return logits
