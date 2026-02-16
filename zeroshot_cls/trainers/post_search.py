@@ -80,7 +80,7 @@ def search_prompt_zs(cfg, vweights, image_feature=None, searched_prompt=None, pr
     if not osp.exists(file):
         encode_prompt_lib(clip_model, cfg, dataset=cfg.DATASET.NAME.lower())
     
-if image_feature is None:
+    if image_feature is None:
         image_feat = torch.load(osp.join(cfg.OUTPUT_DIR, "features.pt"))
     else:
         image_feat = image_feature
