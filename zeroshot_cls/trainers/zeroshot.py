@@ -126,7 +126,7 @@ class PointCLIPV2_ZS(TrainerX):
             self.label_store.append(label)
 
             # Logits calculation (Notice we no longer multiply by 10 since we pooled, not concatenated)
-            logits = 100. * aggr_feat @ self.text_feat.t()
+            logits = 100. * aggr_feat @ self.text_feat.to(aggr_feat.dtype).t()
         return logits
 
     def forward_backward(self, batch):
