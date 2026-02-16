@@ -13,6 +13,4 @@ python main.py \
 --trainer ${TRAINER} \
 --dataset-config-file configs/datasets/${DATASET}.yaml \
 --config-file configs/trainers/${TRAINER}/${CFG}.yaml \
---output-dir output/${TRAINER}/${CFG}/${DATASET} \
---no-train \
---zero-shot
+--output-dir output/${TRAINER}/${CFG}/${DATASET}
