@@ -32,7 +32,7 @@ class aggergator_Graph(nn.Module):
         # (Replace with your actual implementation)
         pass
 
-def forward(self, x, batch_size, num_views):
+    def forward(self, x, batch_size, num_views):
         """
         x: Image features of shape [Batch * Num_Views, Channels]
         """
