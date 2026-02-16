@@ -98,16 +98,17 @@ def main(args):
     if args.zero_shot:
             trainer.test_zs()
             
-            vweights = best_param.best_prompt_weight['{}_{}_test_weights'.format(cfg.DATASET.NAME.lower(), cfg.MODEL.BACKBONE.NAME2)]
-            prompts = best_param.best_prompt_weight['{}_{}_test_prompts'.format(cfg.DATASET.NAME.lower(), cfg.MODEL.BACKBONE.NAME2)]
+            # vweights = best_param.best_prompt_weight['{}_{}_test_weights'.format(cfg.DATASET.NAME.lower(), cfg.MODEL.BACKBONE.NAME2)]
+            # prompts = best_param.best_prompt_weight['{}_{}_test_prompts'.format(cfg.DATASET.NAME.lower(), cfg.MODEL.BACKBONE.NAME2)]
             
-            if args.post_search:
-                prompts, image_feature = search_prompt_zs(cfg, vweights, searched_prompt=prompts)
-                return
+            # if args.post_search:
+            #     prompts, image_feature = search_prompt_zs(cfg, vweights, searched_prompt=prompts)
+            #     return
     # 2. STANDARD TRAINING MODE
     # If we are NOT in zero-shot mode, and we didn't pass --no-train, start training!
     # 2. STANDARD TRAINING MODE
     elif not args.no_train:
+        trainer.test_zs()
         print("Starting custom PyTorch training loop...")
         
         # 1. Put your GNN in training mode
@@ -115,7 +116,7 @@ def main(args):
         
         # 2. Extract the dataloader and total epochs
         train_loader = trainer.train_loader_x
-        max_epochs = cfg.OPTIM.MAX_EPOCH
+        max_epochs = 1
         
         for epoch in range(max_epochs):
             print(f"\n--- Epoch {epoch + 1}/{max_epochs} ---")
@@ -130,11 +131,12 @@ def main(args):
                     loss = loss_summary["loss"]
                     acc = loss_summary["acc"]
                     print(f"Batch {batch_idx} | Loss: {loss:.4f} | Accuracy: {acc:.2f}%")
-            
+        trainer.test_zs()
+
             # 5. Step the learning rate scheduler after every epoch
-            print(trainer.sched)
-            if trainer.sched is not None:
-                trainer.sched.step()
+            # print(trainer.sched)
+            # if trainer.sched is not None:
+            #     trainer.sched.step()
             
                 
 if __name__ == '__main__':
