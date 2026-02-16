@@ -76,7 +76,7 @@ class PointCLIPV2_ZS(TrainerX):
         self.label_store = []
         
         self.view_weights = torch.Tensor(best_prompt_weight['{}_{}_test_weights'.format(self.cfg.DATASET.NAME.lower(), self.cfg.MODEL.BACKBONE.NAME2)]).cuda()
-        self.gnn_aggregator = aggergator_Graph(self.channel).to(self.dtype).cuda()
+        self.gnn_aggregator = aggergator_Graph(self.channel).to(torch.float32).cuda()
 
         for param in self.visual_encoder.parameters():
             param.requires_grad = False
@@ -138,19 +138,21 @@ class PointCLIPV2_ZS(TrainerX):
         # 2. Project 3D points to 2D images
         images = self.real_proj(pc).type(self.dtype)
 
-        # 3. Extract CLIP features WITHOUT tracking gradients (Saves VRAM!)
+        # 3. Extract CLIP features WITHOUT tracking gradients
         with torch.no_grad():
             image_feat = self.visual_encoder(images)
             image_feat = image_feat / image_feat.norm(dim=-1, keepdim=True)
-            image_feat = image_feat.type(self.dtype)
+            
+            # ADD THESE LINES to apply the view weights and cast to float32
+            image_feat = image_feat.reshape(-1, self.num_views, self.channel) * self.view_weights.reshape(1, -1, 1)
+            image_feat = image_feat.reshape(-1, self.channel).type(torch.float32)
 
-        # 4. GNN Aggregation (Gradients are tracked here!)
+        # 4. GNN Aggregation (Now receiving float32 weighted features)
         aggr_feat = self.gnn_aggregator(image_feat, batch_size, self.num_views)
         aggr_feat = aggr_feat / aggr_feat.norm(dim=-1, keepdim=True)
-
-        # 5. Calculate Logits
-        logits = 100. * aggr_feat @ self.text_feat.detach().t()
-
+        
+        # 5. Calculate Logits (Ensure text_feat is cast to float32 to match aggr_feat)
+        logits = 100. * aggr_feat @ self.text_feat.detach().type(torch.float32).t()
         # 6. Calculate Loss
         loss = self.criterion(logits, label)
 
