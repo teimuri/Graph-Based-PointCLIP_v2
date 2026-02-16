@@ -20,7 +20,7 @@ def textual_encoder(cfg, clip_model, searched_prompt=None):
     """
     prompt = searched_prompt
     prompt_token = torch.cat([clip.tokenize(p) for p in prompt]).cuda()
-    text_feat = clip_model.encode_text(prompt_token).repeat(1, cfg.MODEL.PROJECT.NUM_VIEWS)
+    text_feat = clip_model.encode_text(prompt_token)
     return text_feat
 
 
@@ -52,7 +52,7 @@ def random_textual_replace(cfg, prompt_feat=None, c_i=None, sent_feat=None):
     """Replace a category prompt from the pre-extracted text feature library.
     """
     temp_prompt_feat = prompt_feat.clone()
-    temp_prompt_feat[c_i, :] = torch.Tensor(sent_feat).float().cuda().repeat(1, cfg.MODEL.PROJECT.NUM_VIEWS)
+    temp_prompt_feat[c_i, :] = torch.Tensor(sent_feat).float().cuda()
     return temp_prompt_feat
     
     
@@ -80,17 +80,17 @@ def search_prompt_zs(cfg, vweights, image_feature=None, searched_prompt=None, pr
     if not osp.exists(file):
         encode_prompt_lib(clip_model, cfg, dataset=cfg.DATASET.NAME.lower())
     
-    if image_feature is None:
+if image_feature is None:
         image_feat = torch.load(osp.join(cfg.OUTPUT_DIR, "features.pt"))
     else:
         image_feat = image_feature
-    view_weights = torch.tensor(vweights).cuda()
-    image_feat_w = image_feat.reshape(-1, cfg.MODEL.PROJECT.NUM_VIEWS, cfg.MODEL.BACKBONE.CHANNEL) * view_weights.reshape(1, -1, 1)
-    image_feat_w = image_feat_w.reshape(-1, cfg.MODEL.PROJECT.NUM_VIEWS * cfg.MODEL.BACKBONE.CHANNEL).type(clip_model.dtype)
+    
+    # --- DELETED the view_weights reshaping logic ---
+    # Because your GNN already pooled the features, image_feat is already the final shape!
+    image_feat_w = image_feat.type(clip_model.dtype)
     
     # Before search
-    logits = clip_model.logit_scale.exp() * image_feat_w @ text_feat.t() * 1.0
-    acc, _ = accuracy(logits, labels, topk=(1, 5))
+    logits = clip_model.logit_scale.exp() * image_feat_w @ text_feat.t() * 1.0    acc, _ = accuracy(logits, labels, topk=(1, 5))
     acc = (acc / image_feat.shape[0]) * 100
     print(f"=> Before search, zero-shot accuracy: {acc:.2f}")
     
