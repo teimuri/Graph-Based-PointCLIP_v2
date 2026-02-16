@@ -37,7 +37,7 @@ class aggergator_Graph(nn.Module):
         x: Image features of shape [Batch * Num_Views, Channels]
         """
         # 1. Reshape the flat tensor into [Batch, Num_Views, Channels]
-        x_reshaped = x.view(batch_size, num_views, -1)*0
+        x_reshaped = x.view(batch_size, num_views, -1)
         
         # 2. Sum across the views (dimension 1) to get [Batch, Channels]
         aggr_feat = x_reshaped.sum(dim=1)
