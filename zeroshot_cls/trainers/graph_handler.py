@@ -2,48 +2,46 @@ import torch
 from torch_geometric.data import Data
 from torch_geometric.nn import GCNConv, global_mean_pool
 import torch.nn as nn
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch_geometric.nn import GCNConv
 
 class aggergator_Graph(nn.Module):
-    def __init__(self, in_channels, hidden_dim=256):
+    def __init__(self, in_channels):
         super().__init__()
-        # The GNN acts purely as a scoring mechanism
-        self.conv1 = GCNConv(in_channels, hidden_dim)
-        self.conv2 = GCNConv(hidden_dim, hidden_dim)
-        
-        # Projects the hidden graph features into a single scalar weight per view
-        self.scorer = nn.Linear(hidden_dim, 1)
-        self.register_buffer('edge_index', self.get_view_edge_index())
+        # A simple 2-layer Graph Convolutional Network
+        self.conv1 = GCNConv(in_channels, in_channels)
+        self.conv2 = GCNConv(in_channels, in_channels)
+        self.relu = nn.ReLU()
+        self.edge_index = self.get_view_edge_index().cuda()
 
 
     def forward(self, x, batch_size, num_views):
-        device = x.device
+        """
+        x: Image features of shape [Batch * Num_Views, Channels]
+        """
+        x = x.cuda()
+        # 1. Message Passing: Let views talk to their neighbors
+        # We process the whole batch of graphs at once
+        # Create a batch vector to keep track of which nodes belong to which object in the batch
+        batch_idx = torch.arange(batch_size).repeat_interleave(num_views).to(x.device)
         
-        # ADD THIS LINE: Cast the FP16 CLIP features to FP32 for the GNN
-        x = x.to(torch.float32)
+        # Repeat the edge_index for each item in the batch
+        # This shifts the node indices so graph 2's nodes don't connect to graph 1's nodes
+        edge_indices = []
+        for i in range(batch_size):
+            offset = i * num_views
+            edge_indices.append(self.edge_index + offset)
+        batched_edge_index = torch.cat(edge_indices, dim=1)
+
+        # Apply GCN layers
+        x = self.conv1(x, batched_edge_index)
+        x = self.relu(x)
+        x = self.conv2(x, batched_edge_index)
         
-        # Shift edge indices for the batch
-        edge_offset = (torch.arange(batch_size, device=device) * num_views).view(-1, 1, 1)
-        batched_edge_index = (self.edge_index.unsqueeze(0) + edge_offset).transpose(0, 1).reshape(2, -1)
+        # 2. Aggregation (Pooling)
+        # Combine the 10 view nodes into 1 single feature vector per 3D object
+        # Global mean pool averages the nodes for each graph in the batch
+        aggr_feat = global_mean_pool(x, batch_idx) 
         
-        # --- 1. Graph Message Passing (To learn view importance) ---
-        h = F.relu(self.conv1(x, batched_edge_index))
-        h = F.relu(self.conv2(h, batched_edge_index))
-        
-        # Calculate raw scores for each view
-        raw_scores = self.scorer(h).view(batch_size, num_views, 1)
-        
-        # Softmax ensures the weights for each object's 10 views sum to 1.0
-        attn_weights = F.softmax(raw_scores, dim=1)
-        
-        # --- 2. Weighted Sum of the ORIGINAL Features ---
-        x_reshaped = x.view(batch_size, num_views, -1)
-        aggr_feat = (x_reshaped * attn_weights).sum(dim=1)
-        
-        return aggr_feat
+        return aggr_feat.cpu
 
     def get_view_edge_index(self):
         # Define the connections based on geometric proximity
