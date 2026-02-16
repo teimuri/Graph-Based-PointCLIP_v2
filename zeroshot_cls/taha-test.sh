@@ -14,5 +14,4 @@ python main.py \
 --dataset-config-file configs/datasets/${DATASET}.yaml \
 --config-file configs/trainers/${TRAINER}/${CFG}.yaml \
 --output-dir output/${TRAINER}/${CFG}/${DATASET} \
---zero-shot \
 --post-search
