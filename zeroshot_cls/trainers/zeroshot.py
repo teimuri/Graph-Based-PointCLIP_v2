@@ -111,7 +111,7 @@ class PointCLIPV2_ZS(TrainerX):
             
             image_feat = image_feat / image_feat.norm(dim=-1, keepdim=True)
             image_feat = image_feat.reshape(-1, self.num_views, self.channel) * self.view_weights.reshape(1, -1, 1)
-            image_feat = image_feat.reshape(-1, self.channel).type(self.dtype) # Shape: [B * 10, C]
+            image_feat = image_feat.reshape(-1, self.channel).type(torch.float32) # Shape: [B * 10, C]
             batch_size = pc.shape[0]
         return image_feat,batch_size
     def model_inference(self, pc, label=None):
