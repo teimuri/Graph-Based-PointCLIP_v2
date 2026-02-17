@@ -153,7 +153,6 @@ class PointCLIPV2_ZS(TrainerX):
         label = batch["label"].cuda()
 
         if training:
-            raise ValueError(1118281)
             # --- 3D AUGMENTATION START ---
             
             # A. Random Rotation (Around the Y-axis / Up-axis)
