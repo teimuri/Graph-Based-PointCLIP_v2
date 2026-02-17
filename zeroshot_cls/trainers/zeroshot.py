@@ -155,21 +155,21 @@ class PointCLIPV2_ZS(TrainerX):
         if training:
             # --- 3D AUGMENTATION START ---
             
-            # # A. Random Rotation (Around the Y-axis / Up-axis)
-            # theta = torch.rand(1).item() * 2 * 3.1415926  # Random angle
-            # cos_t = torch.cos(torch.tensor(theta))
-            # sin_t = torch.sin(torch.tensor(theta))
-            # # Rotation matrix for Y-axis
-            # rot_mat = torch.tensor([
-            #     [cos_t, 0, sin_t],
-            #     [0, 1, 0],
-            #     [-sin_t, 0, cos_t]
-            # ], device=pc.device)
-            # pc = torch.matmul(pc, rot_mat)
+            # A. Random Rotation (Around the Y-axis / Up-axis)
+            theta = torch.rand(1).item() * 2 * 3.1415926  # Random angle
+            cos_t = torch.cos(torch.tensor(theta))
+            sin_t = torch.sin(torch.tensor(theta))
+            # Rotation matrix for Y-axis
+            rot_mat = torch.tensor([
+                [cos_t, 0, sin_t],
+                [0, 1, 0],
+                [-sin_t, 0, cos_t]
+            ], device=pc.device)
+            pc = torch.matmul(pc, rot_mat)
 
             # B. Point Jittering (Adding small noise)
             # This helps the model stay robust to sensor noise (crucial for ScanObjectNN)
-            noise = torch.randn_like(pc) * 0.04 
+            noise = torch.randn_like(pc) * 0.02 
             pc = pc + noise
 
             # C. Random Scaling
