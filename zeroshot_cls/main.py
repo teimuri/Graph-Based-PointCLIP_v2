@@ -25,6 +25,8 @@ def find_transforms(obj, depth=0):
     if hasattr(obj, 'dataset'):
         find_transforms(obj.dataset, depth + 1)
 
+    raise ValueError(9999999)
+
 def print_args(args, cfg):
     print('***************')
     print('** Arguments **')
