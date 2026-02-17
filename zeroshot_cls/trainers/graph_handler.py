@@ -2,7 +2,7 @@ import torch
 from torch_geometric.data import Data
 from torch_geometric.nn import GCNConv, global_mean_pool
 import torch.nn as nn
-
+import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -89,7 +89,15 @@ class aggergator_Graph(nn.Module):
         edge_index = torch.tensor(all_edges, dtype=torch.long).t().contiguous()
         return edge_index
     def save_gnn(self,path):
-        torch.save(self.state_dict(),path)
+        # 1. Extract the directory part of the path (e.g., "saved_models/exp_1")
+        directory = os.path.dirname(path)
+        
+        # 2. If a directory was specified, create it (and any parent folders)
+        if directory: 
+            os.makedirs(directory, exist_ok=True)
+            
+        # 3. Now it is safe to save!
+        torch.save(self.state_dict(), path)
     
     def load_gnn(self, path):
         self.load_state_dict(torch.load(path))
