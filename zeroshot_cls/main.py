@@ -12,6 +12,19 @@ from trainers import best_param
 from trainers import zeroshot
 from trainers.post_search import search_weights_zs, search_prompt_zs
 
+def find_transforms(obj, depth=0):
+    if depth > 3: return # Don't go too deep
+    
+    # Check common names
+    for attr in ['tfm', 'transform', 'transforms', 'base_transform']:
+        if hasattr(obj, attr):
+            print(f"{'  ' * depth}Found '{attr}': {getattr(obj, attr)}")
+            return
+            
+    # If not found, look inside nested datasets (common in Dassl)
+    if hasattr(obj, 'dataset'):
+        find_transforms(obj.dataset, depth + 1)
+
 def print_args(args, cfg):
     print('***************')
     print('** Arguments **')
@@ -120,22 +133,7 @@ def main(args):
         
         # 2. Extract the dataloader and total epochs
         train_loader = trainer.train_loader_x
-        # 1. Get one batch
-        batch1 = next(iter(train_loader))
-        # 2. Get the exact same batch again (or just the same image)
-        batch2 = next(iter(train_loader))
-
-        img1 = batch1["img"] if isinstance(batch1, dict) else batch1[0]
-        img2 = batch2["img"] if isinstance(batch2, dict) else batch2[0]
-
-        # 3. If they are exactly the same, the difference will be 0. 
-        # If they are augmented (flipped/cropped), the difference will be large.
-        diff = (img1 - img2).abs().sum().item()
-
-        if diff == 0:
-            print("⚠️ WARNING: No augmentation detected. Images are identical.")
-        else:
-            print(f"✅ Augmentation is ACTIVE. (Batch difference: {diff:.2f})")
+        find_transforms(train_loader.dataset)
         max_epochs = cfg.OPTIM.MAX_EPOCH
         for epoch in range(max_epochs):
             print(f"\n--- Epoch {epoch + 1}/{max_epochs} ---")
