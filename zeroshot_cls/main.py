@@ -12,20 +12,28 @@ from trainers import best_param
 from trainers import zeroshot
 from trainers.post_search import search_weights_zs, search_prompt_zs
 
-def find_transforms(obj, depth=0):
-    if depth > 3: return # Don't go too deep
-    
-    # Check common names
-    for attr in ['tfm', 'transform', 'transforms', 'base_transform']:
-        if hasattr(obj, attr):
-            print(f"{'  ' * depth}Found '{attr}': {getattr(obj, attr)}")
-            return
-            
-    # If not found, look inside nested datasets (common in Dassl)
-    if hasattr(obj, 'dataset'):
-        find_transforms(obj.dataset, depth + 1)
+import torchvision.transforms as T
 
-    raise ValueError(9999999)
+def force_find_transforms(dataset):
+    print(f"Scanning {type(dataset).__name__} for transforms...")
+    # Look at every attribute the object has
+    for attr_name in dir(dataset):
+        try:
+            attr_value = getattr(dataset, attr_name)
+            # Check if it's a Compose object or a list of transforms
+            if isinstance(attr_value, (T.Compose, list, T.Resize, T.RandomResizedCrop)):
+                print(f"Found it! Attribute '{attr_name}' contains:\n{attr_value}")
+                return
+        except:
+            continue
+    
+    # If not found, check if there's a nested dataset and repeat
+    if hasattr(dataset, 'dataset'):
+        force_find_transforms(dataset.dataset)
+    else:
+        print("Still nothing. The transforms might be applied inside the __getitem__ method.")
+
+    raise ValueError(99999)
 
 def print_args(args, cfg):
     print('***************')
