@@ -27,6 +27,8 @@ def print_args(args, cfg):
 
 
 def reset_cfg(cfg, args):
+    if args.gnn_dir:
+        cfg.GNN_DIR = args.gnn_dir
 
     if args.output_dir:
         cfg.OUTPUT_DIR = args.output_dir
@@ -96,6 +98,8 @@ def main(args):
 
     # zero-shot classification
     if args.zero_shot:
+            if args.gnn_dir:
+                trainer.gnn_aggregator.load_gnn(args.gnn_dir)
             trainer.test_zs()
             
             # vweights = best_param.best_prompt_weight['{}_{}_test_weights'.format(cfg.DATASET.NAME.lower(), cfg.MODEL.BACKBONE.NAME2)]
@@ -117,7 +121,8 @@ def main(args):
         # 2. Extract the dataloader and total epochs
         train_loader = trainer.train_loader_x
         max_epochs = 5
-        
+        if args.gnn_dir:
+            trainer.gnn_aggregator.save_gnn(args.gnn_dir)
         for epoch in range(max_epochs):
             print(f"\n--- Epoch {epoch + 1}/{max_epochs} ---")
             
@@ -136,6 +141,8 @@ def main(args):
             # print(trainer.sched)
             if trainer.sched is not None:
                 trainer.sched.step()
+        if args.gnn_dir:
+            trainer.gnn_aggregator.save_gnn(args.gnn_dir)
         trainer.test_zs()
             
                 
@@ -152,6 +159,7 @@ if __name__ == '__main__':
     parser.add_argument('--zero-shot', action='store_true', help='zero-shot only')
     parser.add_argument('--post-search', default=True, action='store_true', help='post-search only')
     parser.add_argument('--model-dir', type=str, default='',help='load model from this directory for eval-only mode')
+    parser.add_argument('--gnn-dir', type=str, default='',help='load gnn from this directory')
     parser.add_argument('--load-epoch', type=int, default=175, help='load model weights at this epoch for evaluation')
     parser.add_argument('--no-train', action='store_true', help='do not call trainer.train()')
     parser.add_argument('opts', default=None, nargs=argparse.REMAINDER, help='modify config options using the command-line')

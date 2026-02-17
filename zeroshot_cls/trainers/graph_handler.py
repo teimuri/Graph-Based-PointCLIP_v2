@@ -27,11 +27,6 @@ class aggergator_Graph(nn.Module):
         # Keep this on CPU initially, we will move it to the correct device in forward()
         self.register_buffer('edge_index', self.get_view_edge_index())
 
-    def get_view_edge_index(self):
-        # Assuming you have your edge logic here! 
-        # (Replace with your actual implementation)
-        pass
-
     def forward(self, x, batch_size, num_views):
         """
         x: Image features of shape [Batch * Num_Views, Channels]
@@ -93,3 +88,8 @@ class aggergator_Graph(nn.Module):
         # Convert to PyTorch tensor of shape [2, num_edges]
         edge_index = torch.tensor(all_edges, dtype=torch.long).t().contiguous()
         return edge_index
+    def save_gnn(self,path):
+        torch.save(self.state_dict(),path)
+    
+    def load_gnn(self, path):
+        self.load_state_dict(torch.load(path))
