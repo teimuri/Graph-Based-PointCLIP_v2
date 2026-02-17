@@ -93,59 +93,94 @@ def main(args):
     if torch.cuda.is_available() and cfg.USE_CUDA:
         torch.backends.cudnn.benchmark = True
 
-    # print_args(args, cfg)
     print('Collecting env info ...')
     print('** System info **\n{}\n'.format(collect_env_info()))
 
     trainer = build_trainer(cfg)
 
-    # zero-shot classification
+    # 1. ZERO-SHOT MODE
     if args.zero_shot:
-            if args.gnn_dir:
-                trainer.gnn_aggregator.load_gnn(args.gnn_dir)
-            trainer.test_zs()
-            
-            if args.post_search:
-                vweights = best_param.best_prompt_weight['{}_{}_test_weights'.format(cfg.DATASET.NAME.lower(), cfg.MODEL.BACKBONE.NAME2)]
-                prompts = best_param.best_prompt_weight['{}_{}_test_prompts'.format(cfg.DATASET.NAME.lower(), cfg.MODEL.BACKBONE.NAME2)]
-            
-                prompts, image_feature = search_prompt_zs(cfg, vweights, searched_prompt=prompts)
-                return
-    # 2. STANDARD TRAINING MODE
-    # If we are NOT in zero-shot mode, and we didn't pass --no-train, start training!
+        if args.gnn_dir:
+            trainer.gnn_aggregator.load_gnn(args.gnn_dir)
+        trainer.test_zs()
+        
+        if args.post_search:
+            vweights = best_param.best_prompt_weight['{}_{}_test_weights'.format(cfg.DATASET.NAME.lower(), cfg.MODEL.BACKBONE.NAME2)]
+            prompts = best_param.best_prompt_weight['{}_{}_test_prompts'.format(cfg.DATASET.NAME.lower(), cfg.MODEL.BACKBONE.NAME2)]
+        
+            prompts, image_feature = search_prompt_zs(cfg, vweights, searched_prompt=prompts)
+            return
+
     # 2. STANDARD TRAINING MODE
     elif not args.no_train:
-        # trainer.test_zs()
         print("Starting custom PyTorch training loop...")
         
-        # 1. Put your GNN in training mode
-        trainer.model.train()
-        
-        # 2. Extract the dataloader and total epochs
         train_loader = trainer.train_loader_x
+        
+        # Determine the validation loader (Dassl usually provides val_loader or a test_loader dict)
+        if hasattr(trainer, 'val_loader') and trainer.val_loader is not None:
+            val_loader = trainer.val_loader
+        elif hasattr(trainer, 'test_loader'):
+            # Dassl test_loader is often a dict containing dataset names as keys
+            val_loader = list(trainer.test_loader.values())[0] if isinstance(trainer.test_loader, dict) else trainer.test_loader
+        else:
+            val_loader = None
+            print("Warning: No validation or test loader found.")
+
         max_epochs = cfg.OPTIM.MAX_EPOCH
+        best_val_acc = 0.0  # Keep track of the best accuracy
+
         for epoch in range(max_epochs):
             print(f"\n--- Epoch {epoch + 1}/{max_epochs} ---")
             
+            # --- TRAINING PHASE ---
+            trainer.model.train()
             for batch_idx, batch in enumerate(train_loader):
                 
-                # 3. Execute the forward/backward method we wrote earlier
-                loss_summary = trainer.forward_backward(batch,training=True)
+                loss_summary = trainer.forward_backward(batch, training=True)
                 
-                # 4. Print the loss and accuracy every 10 batches
                 if batch_idx % 10 == 0:
                     loss = loss_summary["loss"]
                     ce_loss = loss_summary["ce_loss"]
                     supcon_loss = loss_summary["supcon_loss"]
                     acc = loss_summary["acc"]
                     current_lr = trainer.optim.param_groups[0]['lr']
-                    print(f"Batch {batch_idx} |current_lr: {current_lr:.6f}| Loss: {loss:.4f} | ce_loss: {ce_loss:.3f} | con_loss: {supcon_loss:.3f} | Accuracy: {acc:.2f}%")
-            # 5. Step the learning rate scheduler after every epoch
-            # print(trainer.sched)
+                    print(f"Train Batch {batch_idx} | LR: {current_lr:.6f} | Loss: {loss:.4f} | ce_loss: {ce_loss:.3f} | con_loss: {supcon_loss:.3f} | Acc: {acc:.2f}%")
+            
             if trainer.sched is not None:
                 trainer.sched.step()
+
+            # --- VALIDATION PHASE ---
+            if val_loader is not None:
+                trainer.model.eval()
+                val_loss, val_ce, val_supcon, val_acc = 0.0, 0.0, 0.0, 0.0
+                num_batches = 0
+                
+                with torch.no_grad():
+                    for batch in val_loader:
+                        loss_summary = trainer.forward_backward(batch, training=False)
+                        val_loss += loss_summary["loss"]
+                        val_ce += loss_summary["ce_loss"]
+                        val_supcon += loss_summary["supcon_loss"]
+                        val_acc += loss_summary["acc"]
+                        num_batches += 1
+                
+                if num_batches > 0:
+                    avg_val_loss = val_loss / num_batches
+                    avg_val_acc = val_acc / num_batches
+                    print(f"--> Validation | Loss: {avg_val_loss:.4f} | ce_loss: {val_ce/num_batches:.3f} | con_loss: {val_supcon/num_batches:.3f} | Acc: {avg_val_acc:.2f}%")
+                    
+                    # Optional: Save logic for the best model
+                    if avg_val_acc > best_val_acc:
+                        best_val_acc = avg_val_acc
+                        print(f"🌟 New best validation accuracy: {best_val_acc:.2f}%")
+                        # You can trigger your checkpoint saving here if needed
+
+        # Save final GNN weights
         if args.gnn_dir:
             trainer.gnn_aggregator.save_gnn(args.gnn_dir)
+        
+        # Final Zero-Shot / Eval Test
         trainer.test_zs()
             
                 
