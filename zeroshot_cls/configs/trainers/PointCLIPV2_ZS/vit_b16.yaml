@@ -26,7 +26,7 @@ OPTIM:
   NAME: 'adam'
   LR: 0.001
   MAX_EPOCH: 20
-  LR_SCHEDULER: 'step'
+  LR_SCHEDULER: 'multi_step'
   STEPSIZE: (4,)          # Changed from (-1,) to drop the LR at epoch 8
   GAMMA: 0.1
   WEIGHT_DECAY: 0.0005
