@@ -87,7 +87,7 @@ class PointCLIPV2_ZS(TrainerX):
 
         # 3. OPTIMIZER: Tell Dassl to only train the GNN
         self.model = self.gnn_aggregator 
-        
+        raise ValeError(cfg.OPTIM)
         # Change this line to explicitly pass the parameters:
         self.optim = build_optimizer(self.model.parameters(), cfg.OPTIM)
         self.sched = build_lr_scheduler(self.optim, cfg.OPTIM)
