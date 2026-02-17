@@ -2,6 +2,5 @@ zeroshot_cls/data
 zeroshot_cls/output
 zeroshot_cls/prompts
 zeroshot_cls/Dassl3D
-zeroshot_cls/configs
 zeroshot_cls/clip
 **/__pycache__/
