@@ -1,6 +1,6 @@
 DATALOADER:
   TRAIN_X:
-    BATCH_SIZE: 256
+    BATCH_SIZE: 512
   TEST:
     BATCH_SIZE: 16
   NUM_WORKERS: 8
@@ -24,10 +24,10 @@ SEARCH:
 
 OPTIM:
   NAME: 'adam'
-  LR: 0.01
+  LR: 0.001
   MAX_EPOCH: 20
   LR_SCHEDULER: 'single_step'
-  STEPSIZE: (8,)          # Changed from (-1,) to drop the LR at epoch 8
+  STEPSIZE: (4,)          # Changed from (-1,) to drop the LR at epoch 8
   GAMMA: 0.1
   WEIGHT_DECAY: 0.0005
   MOMENTUM: 0.9
