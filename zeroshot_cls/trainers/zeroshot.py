@@ -27,6 +27,48 @@ def accuracy(output, target, topk=(1,)):
         res.append(float(acc_percentage.cpu().numpy()))
         
     return res
+class SupConLoss(nn.Module):
+    def __init__(self, temperature=0.07):
+        super(SupConLoss, self).__init__()
+        self.temperature = temperature
+
+    def forward(self, features, labels):
+        device = features.device
+        batch_size = features.shape[0]
+        
+        # Compute the cosine similarity matrix
+        anchor_dot_contrast = torch.div(
+            torch.matmul(features, features.T),
+            self.temperature
+        )
+        
+        # For numerical stability
+        logits_max, _ = torch.max(anchor_dot_contrast, dim=1, keepdim=True)
+        logits = anchor_dot_contrast - logits_max.detach()
+        
+        # Create a mask that identifies matching labels
+        labels = labels.contiguous().view(-1, 1)
+        mask = torch.eq(labels, labels.T).float().to(device)
+        
+        # Mask-out self-contrast cases (don't contrast an image with itself)
+        logits_mask = torch.scatter(
+            torch.ones_like(mask),
+            1,
+            torch.arange(batch_size).view(-1, 1).to(device),
+            0
+        )
+        mask = mask * logits_mask
+        
+        # Compute log probabilities
+        exp_logits = torch.exp(logits) * logits_mask
+        log_prob = logits - torch.log(exp_logits.sum(1, keepdim=True) + 1e-9)
+        
+        # Compute the mean of log-likelihood over positive samples
+        mean_log_prob_pos = (mask * log_prob).sum(1) / (mask.sum(1) + 1e-9)
+        
+        # Return the negative mean
+        loss = -mean_log_prob_pos.mean()
+        return loss
 class Textual_Encoder(nn.Module):
     def __init__(self, cfg, classnames, clip_model):
         super().__init__()
@@ -109,6 +151,9 @@ class PointCLIPV2_ZS(TrainerX):
         # 4. Define the Loss Function (Cross-Entropy for classification)
         self.criterion = torch.nn.CrossEntropyLoss()
 
+        self.supcon_criterion = SupConLoss(temperature=0.07)
+        self.contrastive_weight = 0.2  # You can tune this (e.g., 0.1 to 1.0)
+
 
     def real_proj(self, pc, imsize=224):
         img = self.get_img(pc).cuda()
@@ -169,8 +214,8 @@ class PointCLIPV2_ZS(TrainerX):
 
             # B. Point Jittering (Adding small noise)
             # This helps the model stay robust to sensor noise (crucial for ScanObjectNN)
-            noise = torch.randn_like(pc) * 0.02 
-            pc = pc + noise
+            # noise = torch.randn_like(pc) * 0.02 
+            # pc = pc + noise
 
             # C. Random Scaling
             # Slightly change the size of the object
@@ -200,20 +245,28 @@ class PointCLIPV2_ZS(TrainerX):
         # 5. Calculate Logits (Ensure text_feat is cast to float32 to match aggr_feat)
         logits = 100. * aggr_feat @ self.text_feat.detach().to(aggr_feat.dtype).t()
         # 6. Calculate Loss
-        loss = self.criterion(logits, label)
+        ce_loss = self.criterion(logits, label)
+        
+        # --- NEW: Apply Supervised Contrastive Loss ---
+        # Note: aggr_feat is already L2 normalized, which is perfect for SupCon
+        supcon_loss = self.supcon_criterion(aggr_feat, label)
+        
+        # Combine the losses
+        loss = ce_loss + (self.contrastive_weight * supcon_loss)
 
-        # 7. Backward Pass & Optimizer Step (Dassl handles the zero_grad() and step() here)
+        # 7. Backward Pass & Optimizer Step
         self.optim.zero_grad()
         loss.backward()
         self.optim.step()
 
-        # 8. Calculate accuracy for the training logger
-        # (Assuming you imported the accuracy function from earlier)
+        # 8. Calculate accuracy
         acc = accuracy(logits.detach(), label, topk=(1,))[0]
 
-        # Return a dictionary so Dassl can print the loss/accuracy to your terminal
+        # Return a dictionary (updated to show both losses if desired)
         loss_summary = {
             "loss": loss.item(),
+            "ce_loss": ce_loss.item(),
+            "supcon_loss": supcon_loss.item(),
             "acc": acc,
         }
         return loss_summary
