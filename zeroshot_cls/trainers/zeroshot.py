@@ -169,12 +169,12 @@ class PointCLIPV2_ZS(TrainerX):
 
             # B. Point Jittering (Adding small noise)
             # This helps the model stay robust to sensor noise (crucial for ScanObjectNN)
-            noise = torch.randn_like(pc) * 0.01 
+            noise = torch.randn_like(pc) * 0.02 
             pc = pc + noise
 
             # C. Random Scaling
             # Slightly change the size of the object
-            scale = torch.empty(1).uniform_(0.8, 1.2).item()
+            scale = torch.empty(1).uniform_(0.7, 1.3).item()
             pc = pc * scale
             
             # --- 3D AUGMENTATION END ---
