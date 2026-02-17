@@ -1,9 +1,5 @@
 # PointCLIP V2: Prompting CLIP and GPT for Powerful 3D Open-world Learning
-My update
-Second update debug
-
-test
-test taha
+Good results on modelnet -> objectnet
 Official implementation of [PointCLIP V2: Prompting CLIP and GPT for Powerful 3D Open-world Learning](https://arxiv.org/abs/2211.11682).
 
 The V1 version of [PointCLIP](https://openaccess.thecvf.com/content/CVPR2022/papers/Zhang_PointCLIP_Point_Cloud_Understanding_by_CLIP_CVPR_2022_paper.pdf) accepted by CVPR 2022 is open-sourced at [here](https://github.com/ZrrSkywalker/PointCLIP).
