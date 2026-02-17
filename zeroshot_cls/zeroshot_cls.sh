@@ -2,7 +2,7 @@
 
 # Path to dataset
 DATASET=scanobjectnn
-# DATASET=scanobjectnn
+TARGETDATASET=modelnet40
 
 TRAINER=PointCLIPV2_ZS
 # Trainer configs: rn50, rn101, vit_b32 or vit_b16
@@ -16,5 +16,5 @@ python main.py \
 --output-dir output/${TRAINER}/${CFG}/${DATASET} \
 --no-train \
 --zero-shot \
---gnn-dir output/${TRAINER}/${CFG}/${DATASET}/gnn/my_gnn_model.pth
+--gnn-dir output/${TRAINER}/${CFG}/${TARGETDATASET}/gnn/my_gnn_model.pth
 
