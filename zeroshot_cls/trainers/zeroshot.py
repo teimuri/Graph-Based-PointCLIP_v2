@@ -151,6 +151,35 @@ class PointCLIPV2_ZS(TrainerX):
         # 1. Unpack the batch from the DataLoader
         pc = batch["img"].cuda()
         label = batch["label"].cuda()
+
+        if self.training:
+            raise ValueError(1118281)
+            # --- 3D AUGMENTATION START ---
+            
+            # A. Random Rotation (Around the Y-axis / Up-axis)
+            theta = torch.rand(1).item() * 2 * 3.1415926  # Random angle
+            cos_t = torch.cos(torch.tensor(theta))
+            sin_t = torch.sin(torch.tensor(theta))
+            # Rotation matrix for Y-axis
+            rot_mat = torch.tensor([
+                [cos_t, 0, sin_t],
+                [0, 1, 0],
+                [-sin_t, 0, cos_t]
+            ], device=pc.device)
+            pc = torch.matmul(pc, rot_mat)
+
+            # B. Point Jittering (Adding small noise)
+            # This helps the model stay robust to sensor noise (crucial for ScanObjectNN)
+            noise = torch.randn_like(pc) * 0.01 
+            pc = pc + noise
+
+            # C. Random Scaling
+            # Slightly change the size of the object
+            scale = torch.empty(1).uniform_(0.8, 1.2).item()
+            pc = pc * scale
+            
+            # --- 3D AUGMENTATION END ---
+
         image_feat,batch_size = self.commen_inference(pc)
 
         # 2. Project 3D points to 2D images

@@ -14,26 +14,6 @@ from trainers.post_search import search_weights_zs, search_prompt_zs
 
 import torchvision.transforms as T
 
-def force_find_transforms(dataset):
-    print(f"Scanning {type(dataset).__name__} for transforms...")
-    # Look at every attribute the object has
-    for attr_name in dir(dataset):
-        try:
-            attr_value = getattr(dataset, attr_name)
-            # Check if it's a Compose object or a list of transforms
-            if isinstance(attr_value, (T.Compose, list, T.Resize, T.RandomResizedCrop)):
-                print(f"Found it! Attribute '{attr_name}' contains:\n{attr_value}")
-                return
-        except:
-            continue
-    
-    # If not found, check if there's a nested dataset and repeat
-    if hasattr(dataset, 'dataset'):
-        force_find_transforms(dataset.dataset)
-    else:
-        print("Still nothing. The transforms might be applied inside the __getitem__ method.")
-
-    raise ValueError(99999)
 
 def print_args(args, cfg):
     print('***************')
@@ -143,7 +123,6 @@ def main(args):
         
         # 2. Extract the dataloader and total epochs
         train_loader = trainer.train_loader_x
-        force_find_transforms(train_loader.dataset)
         max_epochs = cfg.OPTIM.MAX_EPOCH
         for epoch in range(max_epochs):
             print(f"\n--- Epoch {epoch + 1}/{max_epochs} ---")
