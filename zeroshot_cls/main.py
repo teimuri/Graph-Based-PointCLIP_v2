@@ -120,7 +120,7 @@ def main(args):
         
         # 2. Extract the dataloader and total epochs
         train_loader = trainer.train_loader_x
-        raise ValueError(train_loader.dataset.tfm)
+        raise ValueError(dir(train_loader.dataset))
         max_epochs = cfg.OPTIM.MAX_EPOCH
         for epoch in range(max_epochs):
             print(f"\n--- Epoch {epoch + 1}/{max_epochs} ---")
