@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Path to dataset
-DATASET=modelnet40
+DATASET=ScanObjectNN
 # DATASET=scanobjectnn
 
 TRAINER=PointCLIPV2_ZS
@@ -16,4 +16,5 @@ python main.py \
 --output-dir output/${TRAINER}/${CFG}/${DATASET} \
 --no-train \
 --zero-shot \
---post-search
+--gnn-dir output/${TRAINER}/${CFG}/${DATASET}/gnn/my_gnn_model.pth
+
