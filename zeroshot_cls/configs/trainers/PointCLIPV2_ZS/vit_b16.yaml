@@ -25,9 +25,9 @@ SEARCH:
 OPTIM:
   NAME: 'adam'
   LR: 0.001
-  MAX_EPOCH: 20
+  MAX_EPOCH: 30
   LR_SCHEDULER: 'multi_step'
-  STEPSIZE: (4,)          # Changed from (-1,) to drop the LR at epoch 8
+  STEPSIZE: (12,)          # Changed from (-1,) to drop the LR at epoch 8
   GAMMA: 0.1
   WEIGHT_DECAY: 0.0005
   MOMENTUM: 0.9
