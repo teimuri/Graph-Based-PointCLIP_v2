@@ -120,7 +120,22 @@ def main(args):
         
         # 2. Extract the dataloader and total epochs
         train_loader = trainer.train_loader_x
-        raise ValueError(dir(train_loader.dataset))
+        # 1. Get one batch
+        batch1 = next(iter(train_loader))
+        # 2. Get the exact same batch again (or just the same image)
+        batch2 = next(iter(train_loader))
+
+        img1 = batch1["img"] if isinstance(batch1, dict) else batch1[0]
+        img2 = batch2["img"] if isinstance(batch2, dict) else batch2[0]
+
+        # 3. If they are exactly the same, the difference will be 0. 
+        # If they are augmented (flipped/cropped), the difference will be large.
+        diff = (img1 - img2).abs().sum().item()
+
+        if diff == 0:
+            print("⚠️ WARNING: No augmentation detected. Images are identical.")
+        else:
+            print(f"✅ Augmentation is ACTIVE. (Batch difference: {diff:.2f})")
         max_epochs = cfg.OPTIM.MAX_EPOCH
         for epoch in range(max_epochs):
             print(f"\n--- Epoch {epoch + 1}/{max_epochs} ---")
