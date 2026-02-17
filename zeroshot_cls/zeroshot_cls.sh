@@ -16,5 +16,5 @@ python main.py \
 --output-dir output/${TRAINER}/${CFG}/${DATASET} \
 --no-train \
 --zero-shot \
---gnn-dir output/${TRAINER}/${CFG}/${TARGETDATASET}/gnn/my_gnn_model.pth
-
+--gnn-dir output/${TRAINER}/${CFG}/${TARGETDATASET}/gnn/my_gnn_model.pth \
+--post-search
