@@ -102,12 +102,12 @@ def main(args):
                 trainer.gnn_aggregator.load_gnn(args.gnn_dir)
             trainer.test_zs()
             
-            # vweights = best_param.best_prompt_weight['{}_{}_test_weights'.format(cfg.DATASET.NAME.lower(), cfg.MODEL.BACKBONE.NAME2)]
-            # prompts = best_param.best_prompt_weight['{}_{}_test_prompts'.format(cfg.DATASET.NAME.lower(), cfg.MODEL.BACKBONE.NAME2)]
+            if args.post_search:
+                vweights = best_param.best_prompt_weight['{}_{}_test_weights'.format(cfg.DATASET.NAME.lower(), cfg.MODEL.BACKBONE.NAME2)]
+                prompts = best_param.best_prompt_weight['{}_{}_test_prompts'.format(cfg.DATASET.NAME.lower(), cfg.MODEL.BACKBONE.NAME2)]
             
-            # if args.post_search:
-            #     prompts, image_feature = search_prompt_zs(cfg, vweights, searched_prompt=prompts)
-            #     return
+                prompts, image_feature = search_prompt_zs(cfg, vweights, searched_prompt=prompts)
+                return
     # 2. STANDARD TRAINING MODE
     # If we are NOT in zero-shot mode, and we didn't pass --no-train, start training!
     # 2. STANDARD TRAINING MODE
