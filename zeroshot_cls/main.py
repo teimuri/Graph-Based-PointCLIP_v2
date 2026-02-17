@@ -133,9 +133,8 @@ def main(args):
                 if batch_idx % 10 == 0:
                     loss = loss_summary["loss"]
                     acc = loss_summary["acc"]
-                    print(f"Batch {batch_idx} | Loss: {loss:.4f} | Accuracy: {acc:.2f}%")
-                current_lr = trainer.optim.param_groups[0]['lr']
-                print(current_lr)
+                    current_lr = trainer.optim.param_groups[0]['lr']
+                    print(f"Batch {batch_idx} |current_lr: {current_lr:.6f}| Loss: {loss:.4f} | Accuracy: {acc:.2f}%")
             # 5. Step the learning rate scheduler after every epoch
             # print(trainer.sched)
             if trainer.sched is not None:
