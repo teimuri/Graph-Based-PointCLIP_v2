@@ -1,8 +1,8 @@
 #!/bin/bash
 git pull
 # Path to dataset
-# DATASET=modelnet40
-DATASET=scanobjectnn
+DATASET=modelnet40
+# DATASET=scanobjectnn
 
 TRAINER=PointCLIPV2_ZS
 # Trainer configs: rn50, rn101, vit_b32 or vit_b16
@@ -19,9 +19,9 @@ python main.py \
 #!/bin/bash
 
 # Path to dataset
-DATASET=modelnet40
-# DATASET=scanobjectnn
-TARGETDATASET=scanobjectnn
+# DATASET=modelnet40
+DATASET=scanobjectnn
+TARGETDATASET=modelnet40
 
 TRAINER=PointCLIPV2_ZS
 # Trainer configs: rn50, rn101, vit_b32 or vit_b16
