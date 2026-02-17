@@ -147,12 +147,12 @@ class PointCLIPV2_ZS(TrainerX):
             logits = 100. * aggr_feat @ self.text_feat.to(aggr_feat.dtype).t()
         return logits
 
-    def forward_backward(self, batch):
+    def forward_backward(self, batch,training=None):
         # 1. Unpack the batch from the DataLoader
         pc = batch["img"].cuda()
         label = batch["label"].cuda()
 
-        if self.training:
+        if training:
             raise ValueError(1118281)
             # --- 3D AUGMENTATION START ---
             

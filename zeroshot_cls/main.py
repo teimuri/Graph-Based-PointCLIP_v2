@@ -130,7 +130,7 @@ def main(args):
             for batch_idx, batch in enumerate(train_loader):
                 
                 # 3. Execute the forward/backward method we wrote earlier
-                loss_summary = trainer.forward_backward(batch)
+                loss_summary = trainer.forward_backward(batch,training=True)
                 
                 # 4. Print the loss and accuracy every 10 batches
                 if batch_idx % 10 == 0:
