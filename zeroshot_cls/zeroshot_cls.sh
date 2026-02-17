@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Path to dataset
-DATASET=ScanObjectNN
+DATASET=scanobjectnn
 # DATASET=scanobjectnn
 
 TRAINER=PointCLIPV2_ZS
