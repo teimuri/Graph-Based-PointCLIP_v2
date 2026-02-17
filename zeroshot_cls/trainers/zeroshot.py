@@ -152,7 +152,7 @@ class PointCLIPV2_ZS(TrainerX):
         self.criterion = torch.nn.CrossEntropyLoss()
 
         self.supcon_criterion = SupConLoss(temperature=0.07)
-        self.contrastive_weight = 0.2  # You can tune this (e.g., 0.1 to 1.0)
+        self.contrastive_weight = 0.4  # You can tune this (e.g., 0.1 to 1.0)
 
 
     def real_proj(self, pc, imsize=224):
