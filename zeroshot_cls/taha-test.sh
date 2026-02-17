@@ -14,4 +14,4 @@ python main.py \
 --dataset-config-file configs/datasets/${DATASET}.yaml \
 --config-file configs/trainers/${TRAINER}/${CFG}.yaml \
 --output-dir output/${TRAINER}/${CFG}/${DATASET} \
---gnn-dir output/${TRAINER}/${CFG}/${DATASET}/gnn/
+--gnn-dir output/${TRAINER}/${CFG}/${DATASET}/gnn/my_gnn_model.pth
