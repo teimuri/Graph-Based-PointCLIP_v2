@@ -25,13 +25,14 @@ class aggergator_Graph(nn.Module):
         self.fc = nn.Linear(in_channels * 2, in_channels)
         
         # Keep this on CPU initially, we will move it to the correct device in forward()
-        self.register_buffer('edge_index', self.get_view_edge_index())
+        # self.register_buffer('edge_index', )
 
-    def forward(self, x, batch_size, num_views):
+    def forward(self, x, batch_size, num_views, images):
         """
         x: Image features of shape [Batch * Num_Views, Channels]
         """
         device = x.device
+        self.edge_index = self.get_view_edge_index(images)
         
         # --- 1. Vectorized Graph Batching ---
         # Create batch index: [0,0,0..., 1,1,1..., etc.]
@@ -67,9 +68,11 @@ class aggergator_Graph(nn.Module):
         
         return aggr_feat
 
-    def get_view_edge_index(self):
+    def get_view_edge_index(self, images):
         # Define the connections based on geometric proximity
         # Format: [source_node, target_node]
+        print(8383838383)
+        print(images.shape)
         edges = [
             # Ring connections (forming a circle around the object)
             [4, 0], [0, 5], [5, 1], [1, 6], [6, 2], [2, 7], [7, 3], [3, 4],

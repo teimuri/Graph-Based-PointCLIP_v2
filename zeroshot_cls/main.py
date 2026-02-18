@@ -1,6 +1,7 @@
 import os
 import torch
 import argparse
+import copy
 from dassl.engine import build_trainer
 from dassl.config import get_cfg_default
 from dassl.utils import setup_logger, set_random_seed, collect_env_info
@@ -174,11 +175,13 @@ def main(args):
                     if avg_val_acc > best_val_acc:
                         best_val_acc = avg_val_acc
                         print(f"🌟 New best validation accuracy: {best_val_acc:.2f}%")
-                        # You can trigger your checkpoint saving here if needed
+
+                        best_model_state = copy.deepcopy(trainer.model.state_dict())
 
         # Save final GNN weights
         if args.gnn_dir:
             trainer.gnn_aggregator.save_gnn(args.gnn_dir)
+            torch.save(best_model_state, args.gnn_dir)
         
         # Final Zero-Shot / Eval Test
         trainer.test_zs()
