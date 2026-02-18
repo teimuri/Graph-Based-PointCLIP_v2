@@ -151,7 +151,6 @@ def main(args):
 
             # --- VALIDATION PHASE ---
             if val_loader is not None:
-                raise ValueError(val_loader)
                 
                 trainer.model.eval()
                 val_loss, val_ce, val_supcon, val_acc = 0.0, 0.0, 0.0, 0.0
