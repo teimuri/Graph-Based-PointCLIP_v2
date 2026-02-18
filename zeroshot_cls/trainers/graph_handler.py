@@ -71,8 +71,7 @@ class aggergator_Graph(nn.Module):
     def get_view_edge_index(self, images):
         # Define the connections based on geometric proximity
         # Format: [source_node, target_node]
-        print(8383838383)
-        print(images.shape)
+
         edges = [
             # Ring connections (forming a circle around the object)
             [4, 0], [0, 5], [5, 1], [1, 6], [6, 2], [2, 7], [7, 3], [3, 4],
@@ -91,6 +90,7 @@ class aggergator_Graph(nn.Module):
         # Convert to PyTorch tensor of shape [2, num_edges]
         edge_index = torch.tensor(all_edges, dtype=torch.long).t().contiguous()
         return edge_index.cuda()
+
     def save_gnn(self,path):
         # 1. Extract the directory part of the path (e.g., "saved_models/exp_1")
         directory = os.path.dirname(path)
