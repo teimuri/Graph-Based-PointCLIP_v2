@@ -174,12 +174,12 @@ class PointCLIPV2_ZS(TrainerX):
             batch_size = pc.shape[0]
         return images,image_feat,batch_size
     def model_inference(self, pc, label=None):
-        image_feat,batch_size = self.commen_inference(pc)
+        images,image_feat,batch_size = self.commen_inference(pc)
         with torch.no_grad():
             # Realistic Projection
 
             # Pass through the GNN (Outputs shape: [Batch, Channel])
-            aggr_feat = self.gnn_aggregator(image_feat, batch_size, self.num_views)
+            aggr_feat = self.gnn_aggregator(image_feat, batch_size, self.num_views, images)
 
             # Normalize the final aggregated feature before comparing to text
             aggr_feat = aggr_feat / aggr_feat.norm(dim=-1, keepdim=True)
