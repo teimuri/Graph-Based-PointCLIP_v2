@@ -126,7 +126,6 @@ def main(args):
         else:
             val_loader = None
             print("Warning: No validation or test loader found.")
-        raise ValueError(val_loader)
         max_epochs = cfg.OPTIM.MAX_EPOCH
         best_val_acc = 0.0  # Keep track of the best accuracy
 
@@ -152,6 +151,8 @@ def main(args):
 
             # --- VALIDATION PHASE ---
             if val_loader is not None:
+                raise ValueError(val_loader)
+                
                 trainer.model.eval()
                 val_loss, val_ce, val_supcon, val_acc = 0.0, 0.0, 0.0, 0.0
                 num_batches = 0
