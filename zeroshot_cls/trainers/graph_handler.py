@@ -32,15 +32,10 @@ class aggergator_Graph(nn.Module):
         x: Image features of shape [Batch * Num_Views, Channels]
         """
         device = x.device
-        self.edge_index = self.get_view_edge_index(images)
-        
-        # --- 1. Vectorized Graph Batching ---
-        # Create batch index: [0,0,0..., 1,1,1..., etc.]
-        batch_idx = torch.arange(batch_size, device=device).repeat_interleave(num_views)
-        
-        # Shift edge indices for the whole batch instantly (No for-loop needed!)
-        edge_offset = (torch.arange(batch_size, device=device) * num_views).view(-1, 1, 1)
-        batched_edge_index = (self.edge_index.unsqueeze(0) + edge_offset).transpose(0, 1).reshape(2, -1)
+        self.edge_index = []
+        for offset,image_batch in zip(torch.arange(batch_size, device=device),images.view(batch_size,num_views,-1)):
+            self.edge_index.append(get_view_edge_index(image_batch)+offset*batch_size)
+        batched_edge_index = torch.cat(self.edge_index,dim=1)
         
         # --- 2. Layer 1: GAT + Norm + ReLU + Dropout + Residual ---
         identity = x
