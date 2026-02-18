@@ -253,11 +253,11 @@ class PointCLIPV2_ZS(TrainerX):
         
         # Combine the losses
         loss = ce_loss + (self.contrastive_weight * supcon_loss)
-
-        # 7. Backward Pass & Optimizer Step
-        self.optim.zero_grad()
-        loss.backward()
-        self.optim.step()
+        if training:
+            # 7. Backward Pass & Optimizer Step
+            self.optim.zero_grad()
+            loss.backward()
+            self.optim.step()
 
         # 8. Calculate accuracy
         acc = accuracy(logits.detach(), label, topk=(1,))[0]
