@@ -90,7 +90,7 @@ class aggergator_Graph(nn.Module):
         
         # Convert to PyTorch tensor of shape [2, num_edges]
         edge_index = torch.tensor(all_edges, dtype=torch.long).t().contiguous()
-        return edge_index
+        return edge_index.cuda()
     def save_gnn(self,path):
         # 1. Extract the directory part of the path (e.g., "saved_models/exp_1")
         directory = os.path.dirname(path)
