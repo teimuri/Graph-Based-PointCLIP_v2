@@ -36,7 +36,7 @@ class aggergator_Graph(nn.Module):
         for offset,image_batch in zip(torch.arange(batch_size, device=device),images.view(batch_size,num_views,-1)):
             self.edge_index.append(self.get_view_edge_index(image_batch)+offset*num_views)
         batched_edge_index = torch.cat(self.edge_index,dim=1)
-        
+        batch_idx = torch.arange(batch_size, device=device).repeat_interleave(num_views)
         # --- 2. Layer 1: GAT + Norm + ReLU + Dropout + Residual ---
         identity = x
         x = self.conv1(x, batched_edge_index)
