@@ -78,9 +78,9 @@ class aggergator_Graph(nn.Module):
             file_path = os.path.join(folder_name, f"batch_{batch_idx}_view_{view_idx}.png")
             save_image(img, file_path)
 
-    def get_view_edge_index(self, images, batch_idx=0,epoch=None):
+    def get_view_edge_index(self, images, batch_idx=0,save_image=False):
         # 1. Save the images
-        if epoch==0:
+        if save_image==True:
             self.save_graph_images(images, batch_idx)
 
         # 2. Define the connections based on geometric proximity

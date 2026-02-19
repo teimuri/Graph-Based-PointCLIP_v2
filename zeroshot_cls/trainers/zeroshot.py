@@ -192,7 +192,7 @@ class PointCLIPV2_ZS(TrainerX):
             logits = 100. * aggr_feat @ self.text_feat.to(aggr_feat.dtype).t()
         return logits
 
-    def forward_backward(self, batch,training=None,epoch=None):
+    def forward_backward(self, batch,training=None,save_image=False):
         # 1. Unpack the batch from the DataLoader
         pc = batch["img"].cuda()
         label = batch["label"].cuda()
@@ -239,7 +239,7 @@ class PointCLIPV2_ZS(TrainerX):
         #     image_feat = image_feat.reshape(-1, self.channel).type(torch.float32)
 
         # 4. GNN Aggregation (Now receiving float32 weighted features)
-        aggr_feat = self.gnn_aggregator(image_feat, batch_size, self.num_views, images,epoch)
+        aggr_feat = self.gnn_aggregator(image_feat, batch_size, self.num_views, images,save_image)
         aggr_feat = aggr_feat / aggr_feat.norm(dim=-1, keepdim=True)
         
         # 5. Calculate Logits (Ensure text_feat is cast to float32 to match aggr_feat)

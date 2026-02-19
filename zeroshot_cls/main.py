@@ -136,8 +136,10 @@ def main(args):
             # --- TRAINING PHASE ---
             trainer.model.train()
             for batch_idx, batch in enumerate(train_loader):
-                
-                loss_summary = trainer.forward_backward(batch, training=True,epoch=epoch)
+                save_image = None
+                if batch_idx==0 and epoch==0:
+                    save_image=True
+                loss_summary = trainer.forward_backward(batch, training=True,save_image=save_image)
                 
                 if batch_idx % 10 == 0:
                     loss = loss_summary["loss"]
