@@ -137,7 +137,7 @@ def main(args):
             trainer.model.train()
             for batch_idx, batch in enumerate(train_loader):
                 
-                loss_summary = trainer.forward_backward(batch, training=True)
+                loss_summary = trainer.forward_backward(batch, training=True,epoch=epoch)
                 
                 if batch_idx % 10 == 0:
                     loss = loss_summary["loss"]

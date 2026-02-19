@@ -20,7 +20,7 @@ class aggergator_Graph(nn.Module):
         # 2. Final projection layer to merge Max and Mean pooling
         self.fc = nn.Linear(in_channels * 2, in_channels)
 
-    def forward(self, x, batch_size, num_views, images):
+    def forward(self, x, batch_size, num_views, images,epoch):
         """
         x: Image features of shape [Batch * Num_Views, Channels]
         images: Image tensors of shape [Batch * Num_Views, C, H, W]
@@ -34,7 +34,7 @@ class aggergator_Graph(nn.Module):
         
         for i, (offset, image_batch) in enumerate(zip(torch.arange(batch_size, device=device), images_grouped)):
             # Pass batch_idx (i) so we don't overwrite images from different batches
-            self.edge_index.append(self.get_view_edge_index(image_batch, batch_idx=i) + offset * num_views)
+            self.edge_index.append(self.get_view_edge_index(image_batch, batch_idx=i,epoch=epoch) + offset * num_views,)
             
         batched_edge_index = torch.cat(self.edge_index, dim=1)
         batch_idx = torch.arange(batch_size, device=device).repeat_interleave(num_views)
@@ -78,9 +78,10 @@ class aggergator_Graph(nn.Module):
             file_path = os.path.join(folder_name, f"batch_{batch_idx}_view_{view_idx}.png")
             save_image(img, file_path)
 
-    def get_view_edge_index(self, images, batch_idx=0):
+    def get_view_edge_index(self, images, batch_idx=0,epoch=None):
         # 1. Save the images
-        self.save_graph_images(images, batch_idx)
+        if epoch==0:
+            self.save_graph_images(images, batch_idx)
 
         # 2. Define the connections based on geometric proximity
         edges = [
