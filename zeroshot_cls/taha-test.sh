@@ -1,5 +1,6 @@
 #!/bin/bash
 git pull
+rm -r graph_images
 # Path to dataset
 DATASET=modelnet40
 # DATASET=scanobjectnn
