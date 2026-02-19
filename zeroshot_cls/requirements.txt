@@ -11,4 +11,4 @@ ftfy
 regex
 tqdm
 h5py
-torch-scatter==2.0.9
+torch-scatter
