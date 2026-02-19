@@ -77,6 +77,7 @@ class aggergator_Graph(nn.Module):
             # Save format: graph_images/batch_0_view_1.png
             file_path = os.path.join(folder_name, f"batch_{batch_idx}_view_{view_idx}.png")
             save_image(img, file_path)
+        raise ValueError("End of images saving")
 
     def get_view_edge_index(self, images, batch_idx=0,save_image=False):
         # 1. Save the images
