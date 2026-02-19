@@ -1,10 +1,10 @@
 #!/bin/bash
 git pull
 # Path to dataset
-# DATASET=modelnet40
-DATASET=scanobjectnn
+DATASET=modelnet40
+# DATASET=scanobjectnn
 
-TARGETDATASET=modelnet40
+TARGETDATASET=scanobjectnn
 
 TRAINER=PointCLIPV2_ZS
 # Trainer configs: rn50, rn101, vit_b32 or vit_b16
