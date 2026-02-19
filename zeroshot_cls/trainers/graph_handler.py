@@ -20,7 +20,7 @@ class aggergator_Graph(nn.Module):
         # 2. Final projection layer to merge Max and Mean pooling
         self.fc = nn.Linear(in_channels * 2, in_channels)
 
-    def forward(self, x, batch_size, num_views, images,epoch):
+    def forward(self, x, batch_size, num_views, images,save_image):
         """
         x: Image features of shape [Batch * Num_Views, Channels]
         images: Image tensors of shape [Batch * Num_Views, C, H, W]
@@ -34,7 +34,7 @@ class aggergator_Graph(nn.Module):
         
         for i, (offset, image_batch) in enumerate(zip(torch.arange(batch_size, device=device), images_grouped)):
             # Pass batch_idx (i) so we don't overwrite images from different batches
-            self.edge_index.append(self.get_view_edge_index(image_batch, batch_idx=i,epoch=epoch) + offset * num_views,)
+            self.edge_index.append(self.get_view_edge_index(image_batch, batch_idx=i,save_image=save_image) + offset * num_views,)
             
         batched_edge_index = torch.cat(self.edge_index, dim=1)
         batch_idx = torch.arange(batch_size, device=device).repeat_interleave(num_views)
