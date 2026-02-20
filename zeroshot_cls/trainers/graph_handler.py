@@ -69,6 +69,8 @@ class aggergator_Graph(nn.Module):
         """
         Helper function to save the tensor images to a directory.
         """
+        print(f"Images shape: {images.shape}")
+        
         if not os.path.exists(folder_name):
             os.makedirs(folder_name, exist_ok=True)
             
@@ -81,7 +83,7 @@ class aggergator_Graph(nn.Module):
 
     def get_view_edge_index(self, images, batch_idx=0,save_image=False):
         # 1. Save the images
-        if save_image==True:
+        if save_image==True and batch_idx==1:
             self.save_graph_images(images, batch_idx)
 
         # 2. Define the connections based on geometric proximity
