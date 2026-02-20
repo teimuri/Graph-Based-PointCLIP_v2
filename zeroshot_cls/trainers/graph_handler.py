@@ -23,7 +23,7 @@ class aggergator_Graph(nn.Module):
 
         self.fc = nn.Linear(in_channels * 2, in_channels)
 
-     def _get_zernike_features(self, img_np):
+    def _get_zernike_features(self, img_np):
         """ استخراج ویژگی زرنیک (همان متد قبلی با فیلتر نویز) """
         _, mask = cv2.threshold(img_np, 10, 255, cv2.THRESH_BINARY)
         mask = cv2.medianBlur(mask, 3)
@@ -39,10 +39,13 @@ class aggergator_Graph(nn.Module):
         """ 
         فوت کوزه‌گری: ساخت یال‌های تصادفی اما با وزن هندسی 
         """
+        num_random_edges = torch.randint(low=5, high=12, size=(1,)).item()
+
         num_views = images.shape[0]
-        
+        images_cpu = images.cpu().numpy()
+        images_grayscale = images_cpu[:, 0, :, :] 
         # ۱. استخراج ویژگی‌های زرنیک
-        images_np = (images.squeeze(1).cpu().numpy() * 255).astype(np.uint8)
+        images_np = (images_grayscale * 255).astype(np.uint8)
         z_feats = [self._get_zernike_features(img) for img in images_np]
 
         # ۲. تولید یال‌های تصادفی (Random Sampling of Edges)
@@ -74,6 +77,14 @@ class aggergator_Graph(nn.Module):
 
     def forward(self, x, batch_size, num_views, images, save_image):
         device = x.device
+        if self.training:
+            noise = torch.randn_like(x, device=device)
+            scales = torch.full((batch_size * num_views, 1), 0.01, device=device)
+            for b in range(batch_size):
+                corrupted_indices = torch.randperm(num_views)[:3]
+                scales[b * num_views + corrupted_indices] = 0.2
+            x = x + noise * scales
+            x = F.normalize(x, p=2, dim=-1)
         all_edge_index = []
         all_edge_attr = []
 
