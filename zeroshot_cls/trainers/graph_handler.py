@@ -2,115 +2,103 @@ import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import GATConv, global_mean_pool, global_max_pool
-from torchvision.utils import save_image  # <-- Added for saving image tensors
+from torchvision.utils import save_image
+# --- 1. knn_graph را به import ها اضافه کنید ---
+from torch_geometric.nn import GATConv, global_mean_pool, global_max_pool, knn_graph
 
 class aggergator_Graph(nn.Module):
-    def __init__(self, in_channels, heads=4, dropout=0.2):
+    def __init__(self, in_channels, heads=4, dropout=0.2, k_neighbors=5):
+
         super().__init__()
         self.dropout = dropout
-        
+        self.k_neighbors = k_neighbors 
+
         # 1. Graph Attention (GAT) Layers
         self.conv1 = GATConv(in_channels, in_channels // heads, heads=heads, concat=True)
         self.norm1 = nn.LayerNorm(in_channels)
-        
+
         self.conv2 = GATConv(in_channels, in_channels // heads, heads=heads, concat=True)
         self.norm2 = nn.LayerNorm(in_channels)
-
+        
         # 2. Final projection layer to merge Max and Mean pooling
         self.fc = nn.Linear(in_channels * 2, in_channels)
 
-    def forward(self, x, batch_size, num_views, images,save_image):
+    def build_dynamic_graph(self, view_features):
+
+        edge_index = knn_graph(view_features, k=self.k_neighbors, loop=True, cosine=True)
+        return edge_index.to(view_features.device)
+
+    def forward(self, x, batch_size, num_views, images, save_image=False):
         """
         x: Image features of shape [Batch * Num_Views, Channels]
-        images: Image tensors of shape [Batch * Num_Views, C, H, W]
+        images: (Optional) Image tensors of shape [Batch * Num_Views, C, H, W] for debugging.
         """
         device = x.device
-        self.edge_index = []
+        all_edge_indices = []
+
+        # --- 2. ساخت گراف داینامیک برای هر آبجکت در بچ ---
+        for i in range(batch_size):
+            # الف) امبدینگ‌های مربوط به آبجکت فعلی را جدا کنید
+            start_idx = i * num_views
+            end_idx = (i + 1) * num_views
+            current_view_features = x[start_idx:end_idx]
+
+            # ب) گراف داینامیک را برای این نماها بسازید
+            edge_index = self.build_dynamic_graph(current_view_features)
+
+            # ج) اندیس‌ها را به اندیس گلوبال در بچ تبدیل کرده و اضافه کنید
+            all_edge_indices.append(edge_index + start_idx)
+
+        # تمام edge_index ها را برای ساخت گراف کلی بچ به هم متصل کنید
+        batched_edge_index = torch.cat(all_edge_indices, dim=1)
         
-        # Reshape images to group by batch and view without flattening the spatial dims
-        C, H, W = images.shape[1], images.shape[2], images.shape[3]
-        images_grouped = images.view(batch_size, num_views, C, H, W)
-        
-        for i, (offset, image_batch) in enumerate(zip(torch.arange(batch_size, device=device), images_grouped)):
-            # Pass batch_idx (i) so we don't overwrite images from different batches
-            self.edge_index.append(self.get_view_edge_index(image_batch, batch_idx=i,save_image=save_image) + offset * num_views,)
-            
-        batched_edge_index = torch.cat(self.edge_index, dim=1)
+        # اندیس بچ برای Pooling بدون تغییر باقی می‌ماند
         batch_idx = torch.arange(batch_size, device=device).repeat_interleave(num_views)
-        
-        # --- 2. Layer 1: GAT + Norm + ReLU + Dropout + Residual ---
+
+        # --- 3. لایه 1 GAT + Norm + ReLU + Dropout + Residual ---
         identity = x
         x = self.conv1(x, batched_edge_index)
         x = self.norm1(x)
         x = F.relu(x)
         x = F.dropout(x, p=self.dropout, training=self.training)
-        x = x + identity  
-        
-        # --- 3. Layer 2: GAT + Norm + ReLU + Dropout + Residual ---
+        x = x + identity
+
+        # --- 4. لایه 2 GAT + Norm + ReLU + Dropout + Residual ---
         identity = x
         x = self.conv2(x, batched_edge_index)
         x = self.norm2(x)
         x = F.relu(x)
         x = F.dropout(x, p=self.dropout, training=self.training)
-        x = x + identity 
+        x = x + identity
 
-        # --- 4. Rich Aggregation (Mean + Max Pooling) ---
+        # --- 5. تجمیع با (Mean + Max Pooling) ---
         x_mean = global_mean_pool(x, batch_idx)
         x_max = global_max_pool(x, batch_idx)
-        
-        # Concatenate and project back to original channel dimension
+
+        # الحاق و پروجکشن نهایی
         aggr_feat = torch.cat([x_mean, x_max], dim=1)
         aggr_feat = self.fc(aggr_feat)
-        
+
         return aggr_feat
 
+    # توابع کمکی برای ذخیره سازی مدل و تصاویر (بدون تغییر)
     def save_graph_images(self, images, batch_idx, folder_name="graph_images"):
         """
         Helper function to save the tensor images to a directory.
         """
-        print(f"Images shape: {images.shape}")
-        
         if not os.path.exists(folder_name):
             os.makedirs(folder_name, exist_ok=True)
             
-        # images shape here is [num_views, C, H, W]
         for view_idx, img in enumerate(images):
-            # Save format: graph_images/batch_0_view_1.png
             file_path = os.path.join(folder_name, f"batch_{batch_idx}_view_{view_idx}.png")
             save_image(img, file_path)
-        raise ValueError("End of images saving")
-
-    def get_view_edge_index(self, images, batch_idx=0,save_image=False):
-        # 1. Save the images
-        if save_image==True and batch_idx==1:
-            self.save_graph_images(images, batch_idx)
-
-        # 2. Define the connections based on geometric proximity
-        edges = [
-            # Ring connections (forming a circle around the object)
-            [4, 0], [0, 5], [5, 1], [1, 6], [6, 2], [2, 7], [7, 3], [3, 4],
-            
-            # Top camera (9) connects to all ring cameras
-            [9, 4], [9, 0], [9, 5], [9, 1], [9, 6], [9, 2], [9, 7], [9, 3],
-            
-            # Bottom camera (8) connects to all ring cameras
-            [8, 4], [8, 0], [8, 5], [8, 1], [8, 6], [8, 2], [8, 7], [8, 3]
-        ]
-        
-        # Add reverse edges for undirected graph
-        reverse_edges = [[dst, src] for src, dst in edges]
-        all_edges = edges + reverse_edges
-        
-        # Convert to PyTorch tensor
-        edge_index = torch.tensor(all_edges, dtype=torch.long).t().contiguous()
-        return edge_index.cuda()
-
+    
     def save_gnn(self, path):
         directory = os.path.dirname(path)
-        if directory: 
+        if directory:
             os.makedirs(directory, exist_ok=True)
         torch.save(self.state_dict(), path)
-    
+
     def load_gnn(self, path):
         self.load_state_dict(torch.load(path))
+
