@@ -18,8 +18,6 @@ python3 main.py \
 --output-dir output/${TRAINER}/${CFG}/${DATASET} \
 --gnn-dir output/${TRAINER}/${CFG}/${DATASET}/gnn/my_gnn_model.pth
 
-#!/bin/bash
-
 
 
 # Path to dataset
