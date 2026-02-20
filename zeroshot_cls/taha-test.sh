@@ -12,6 +12,7 @@ TRAINER=PointCLIPV2_ZS
 CFG=vit_b16
 
 export CUDA_VISIBLE_DEVICES=1
+
 python main.py \
 --trainer ${TRAINER} \
 --dataset-config-file configs/datasets/${DATASET}.yaml \
