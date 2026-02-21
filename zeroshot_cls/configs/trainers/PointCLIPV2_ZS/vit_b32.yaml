@@ -1,6 +1,8 @@
 DATALOADER:
+  TRAIN_X:
+    BATCH_SIZE: 8
   TEST:
-    BATCH_SIZE: 16
+    BATCH_SIZE: 8
   NUM_WORKERS: 8
 
 MODEL:
@@ -14,3 +16,26 @@ MODEL:
 SEARCH:
   TIME: 4
   RANGE: 1
+
+OPTIM:
+  NAME: 'adam'
+  LR: 0.001
+  MAX_EPOCH: 10
+  LR_SCHEDULER: 'multi_step'
+  STEPSIZE: (10,)          # Changed from (-1,) to drop the LR at epoch 8
+  GAMMA: 0.1
+  WEIGHT_DECAY: 0.001
+  MOMENTUM: 0.9
+  SGD_DAMPNING: 0
+  SGD_NESTEROV: False
+  RMSPROP_ALPHA: 0.99
+  ADAM_BETA1: 0.9
+  ADAM_BETA2: 0.999
+  STAGED_LR: False
+  NEW_LAYERS: ()
+  BASE_LR_MULT: 0.1
+  WARMUP_EPOCH: -1        # -1 means warmup is disabled
+  WARMUP_TYPE: 'linear'
+  WARMUP_CONS_LR: 1e-05
+  WARMUP_MIN_LR: 1e-05
+  WARMUP_RECOUNT: True
