@@ -9,7 +9,7 @@ TARGETDATASET=scanobjectnn
 
 TRAINER=PointCLIPV2_ZS
 # Trainer configs: rn50, rn101, vit_b32 or vit_b16
-CFG=vit_b16
+CFG=vit_b32
 
 export CUDA_VISIBLE_DEVICES=0
 python main.py \
@@ -28,7 +28,7 @@ python main.py \
 
 TRAINER=PointCLIPV2_ZS
 # Trainer configs: rn50, rn101, vit_b32 or vit_b16
-CFG=vit_b16
+CFG=vit_b32
 
 export CUDA_VISIBLE_DEVICES=0
 python main.py \

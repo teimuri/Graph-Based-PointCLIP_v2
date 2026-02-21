@@ -83,8 +83,8 @@ class aggergator_Graph(nn.Module):
 
     def get_view_edge_index(self, images, batch_idx=0,save_image=False):
         # 1. Save the images
-        if save_image==True and batch_idx==1:
-            self.save_graph_images(images, batch_idx)
+        #if save_image==True and batch_idx==1:
+        #    self.save_graph_images(images, batch_idx)
 
         # 2. Define the connections based on geometric proximity
         edges = [
