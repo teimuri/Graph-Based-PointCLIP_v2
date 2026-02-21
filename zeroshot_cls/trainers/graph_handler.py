@@ -21,9 +21,8 @@ class aggergator_Graph(nn.Module):
         self.conv2 = GATConv(in_channels, in_channels // heads, heads=heads, edge_dim=1, concat=True)
         self.norm2 = nn.LayerNorm(in_channels)
 
-        self.fc = nn.Linear(in_channels * 2, in_channels)
 
-    def _get_zernike_features(self, img_np):
+    def _get__features(self, img_np):
         """ استخراج ویژگی زرنیک (همان متد قبلی با فیلتر نویز) """
         _, mask = cv2.threshold(img_np, 10, 255, cv2.THRESH_BINARY)
         mask = cv2.medianBlur(mask, 3)
@@ -79,10 +78,11 @@ class aggergator_Graph(nn.Module):
         device = x.device
         if self.training:
             noise = torch.randn_like(x, device=device)
-            scales = torch.full((batch_size * num_views, 1), 0.01, device=device)
+            scales = torch.full((batch_size * num_views, 1), 0.003, device=device)
             for b in range(batch_size):
-                corrupted_indices = torch.randperm(num_views)[:3]
-                scales[b * num_views + corrupted_indices] = 0.2
+                start_idx = torch.randint(0, num_views - 2, (1,)).item()
+                corrupted_indices = torch.arange(start_idx, start_idx + 3)
+                scales[b * num_views + corrupted_indices] = 0.07
             x = x + noise * scales
             x = F.normalize(x, p=2, dim=-1)
         all_edge_index = []
@@ -116,8 +116,16 @@ class aggergator_Graph(nn.Module):
         x = F.relu(x)
         x = x + identity 
 
-        aggr_feat = torch.cat([global_mean_pool(x, batch_idx), global_max_pool(x, batch_idx)], dim=1)
-        return self.fc(aggr_feat)
+        if self.training:
+            random_idx = torch.randint(0, num_views, (batch_size,), device=device)
+            batch_offsets = torch.arange(batch_size, device=device) * num_views
+            selected_node_idx = batch_offsets + random_idx
+            pooled_rep = x[selected_node_idx]
+        else:
+            batch_idx = torch.arange(batch_size, device=device).repeat_interleave(num_views)
+            pooled_rep = global_mean_pool(x, batch_idx)
+
+        return pooled_rep
     
     def _get_hu_moments_score(self, image_np_1, image_np_2):
         """
