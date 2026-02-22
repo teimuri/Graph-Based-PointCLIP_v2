@@ -3,114 +3,167 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GATConv, global_mean_pool, global_max_pool
-from torchvision.utils import save_image  # <-- Added for saving image tensors
+from torchvision.utils import save_image
+import numpy as np
+import math # <-- تغییر 1: ایمپورت کردن کتابخانه math
 
+# ==============================================================================
+#  کلاس کمکی برای محاسبه ممان‌های زرنیک به صورت کامل روی GPU
+# ==============================================================================
+class ZernikeMomentsGPU:
+    def __init__(self, height, width, degree, device):
+        self.device = device
+        self.basis = self._precompute_zernike_basis(height, width, degree).to(device)
+        self.n_moments = self.basis.shape[0]
+
+    def _precompute_zernike_basis(self, height, width, degree):
+        """
+        پایه‌های چندجمله‌ای زرنیک را یک بار پیش‌محاسبه می‌کند.
+        """
+        Y, X = torch.meshgrid(torch.arange(height), torch.arange(width), indexing='ij')
+        Y = (2.0 * Y - height + 1) / height
+        X = (2.0 * X - width + 1) / width
+        
+        rho = torch.sqrt(X**2 + Y**2)
+        theta = torch.atan2(Y, X)
+        
+        mask = rho <= 1.0
+        
+        basis_functions = []
+        n_coeffs = 0
+        
+        # --- تغییر 2: استفاده از math.factorial به جای np.math.factorial ---
+        factorials = torch.tensor([math.factorial(i) for i in range(degree + 1)], dtype=torch.float32)
+
+        for n in range(degree + 1):
+            for m in range(n + 1):
+                if (n - m) % 2 == 0:
+                    radial_poly = torch.zeros_like(rho)
+                    for k in range((n - m) // 2 + 1):
+                        numerator = (-1)**k * factorials[n - k]
+                        denominator = factorials[k] * factorials[(n + 2*k - m) // 2] * factorials[(n - 2*k - m) // 2]
+                        radial_poly += (numerator / denominator) * (rho**(n - 2 * k))
+                    
+                    if m == 0:
+                        zernike_poly = torch.sqrt(torch.tensor(n + 1.0)) * radial_poly
+                        basis_functions.append(zernike_poly * mask)
+                    else:
+                        zernike_poly_cos = torch.sqrt(torch.tensor(2.0 * (n + 1.0))) * radial_poly * torch.cos(m * theta)
+                        zernike_poly_sin = torch.sqrt(torch.tensor(2.0 * (n + 1.0))) * radial_poly * torch.sin(m * theta)
+                        basis_functions.append(zernike_poly_cos * mask)
+                        basis_functions.append(zernike_poly_sin * mask)
+                        
+        return torch.stack(basis_functions)
+
+    def __call__(self, silhouettes):
+        """
+        ممان‌ها را برای یک بچ از سیلوئت‌ها محاسبه می‌کند.
+        """
+        area = silhouettes.sum(dim=[1, 2], keepdim=True)
+        area[area == 0] = 1
+        norm_silhouettes = silhouettes / area
+
+        moments = torch.einsum('bxy,mxy->bm', norm_silhouettes, self.basis)
+        return torch.abs(moments)
+
+
+# ==============================================================================
+#  کلاس اصلی گراف با استفاده از محاسبه‌گر GPU (بدون تغییر)
+# ==============================================================================
 class aggergator_Graph(nn.Module):
-    def __init__(self, in_channels, heads=4, dropout=0.2):
+    def __init__(self, in_channels, heads=4, dropout=0.2, image_size=224, zernike_degree=8):
         super().__init__()
         self.dropout = dropout
         
-        # 1. Graph Attention (GAT) Layers
-        self.conv1 = GATConv(in_channels, in_channels // heads, heads=heads, concat=True)
+        self.conv1 = GATConv(in_channels, in_channels // heads, heads=heads, concat=True, edge_dim=1)
         self.norm1 = nn.LayerNorm(in_channels)
         
-        self.conv2 = GATConv(in_channels, in_channels // heads, heads=heads, concat=True)
+        self.conv2 = GATConv(in_channels, in_channels // heads, heads=heads, concat=True, edge_dim=1)
         self.norm2 = nn.LayerNorm(in_channels)
-
-        # 2. Final projection layer to merge Max and Mean pooling
+        
         self.fc = nn.Linear(in_channels * 2, in_channels)
 
-    def forward(self, x, batch_size, num_views, images,save_image):
-        """
-        x: Image features of shape [Batch * Num_Views, Channels]
-        images: Image tensors of shape [Batch * Num_Views, C, H, W]
-        """
-        device = x.device
-        self.edge_index = []
+        self.zernike_calculator = None
+        self.image_size = image_size
+        self.zernike_degree = zernike_degree
+
+        self.register_buffer('gray_weights', torch.tensor([0.299, 0.587, 0.114]).view(3, 1, 1))
         
-        # Reshape images to group by batch and view without flattening the spatial dims
-        C, H, W = images.shape[1], images.shape[2], images.shape[3]
-        images_grouped = images.view(batch_size, num_views, C, H, W)
+        edges = [
+            [4, 0], [0, 5], [5, 1], [1, 6], [6, 2], [2, 7], [7, 3], [3, 4],
+            [9, 4], [9, 0], [9, 5], [9, 1], [9, 6], [9, 2], [9, 7], [9, 3],
+            [8, 4], [8, 0], [8, 5], [8, 1], [8, 6], [8, 2], [8, 7], [8, 3]
+        ]
+        reverse_edges = [[dst, src] for src, dst in edges]
+        all_edges = edges + reverse_edges
+        self.register_buffer('static_edge_index', torch.tensor(all_edges, dtype=torch.long).t().contiguous())
+
+    def forward(self, x, batch_size, num_views, images, save_image):
+        device = x.device
+        
+        if self.zernike_calculator is None:
+            self.zernike_calculator = ZernikeMomentsGPU(
+                self.image_size, self.image_size, self.zernike_degree, device
+            )
+
+        all_edge_indices = []
+        all_edge_attrs = []
+
+        images_grouped = images.view(batch_size, num_views, *images.shape[1:])
         
         for i, (offset, image_batch) in enumerate(zip(torch.arange(batch_size, device=device), images_grouped)):
-            # Pass batch_idx (i) so we don't overwrite images from different batches
-            self.edge_index.append(self.get_view_edge_index(image_batch, batch_idx=i,save_image=save_image) + offset * num_views,)
+            edge_index, edge_attr = self.get_edges_and_attributes_gpu(image_batch)
+            all_edge_indices.append(edge_index + offset * num_views)
+            all_edge_attrs.append(edge_attr)
             
-        batched_edge_index = torch.cat(self.edge_index, dim=1)
+        batched_edge_index = torch.cat(all_edge_indices, dim=1)
+        batched_edge_attr = torch.cat(all_edge_attrs, dim=0).unsqueeze(1)
+
         batch_idx = torch.arange(batch_size, device=device).repeat_interleave(num_views)
         
-        # --- 2. Layer 1: GAT + Norm + ReLU + Dropout + Residual ---
         identity = x
-        x = self.conv1(x, batched_edge_index)
+        x = self.conv1(x, batched_edge_index, edge_attr=batched_edge_attr)
         x = self.norm1(x)
         x = F.relu(x)
         x = F.dropout(x, p=self.dropout, training=self.training)
-        x = x + identity  
+        x = x + identity
         
-        # --- 3. Layer 2: GAT + Norm + ReLU + Dropout + Residual ---
         identity = x
-        x = self.conv2(x, batched_edge_index)
+        x = self.conv2(x, batched_edge_index, edge_attr=batched_edge_attr)
         x = self.norm2(x)
         x = F.relu(x)
         x = F.dropout(x, p=self.dropout, training=self.training)
-        x = x + identity 
+        x = x + identity
 
-        # --- 4. Rich Aggregation (Mean + Max Pooling) ---
         x_mean = global_mean_pool(x, batch_idx)
         x_max = global_max_pool(x, batch_idx)
         
-        # Concatenate and project back to original channel dimension
         aggr_feat = torch.cat([x_mean, x_max], dim=1)
         aggr_feat = self.fc(aggr_feat)
         
         return aggr_feat
 
-    def save_graph_images(self, images, batch_idx, folder_name="graph_images"):
-        """
-        Helper function to save the tensor images to a directory.
-        """
-        print(f"Images shape: {images.shape}")
+    def get_edges_and_attributes_gpu(self, images_batch):
+        gray_images = (images_batch * self.gray_weights).sum(dim=1)
+        silhouettes = (gray_images > (10 / 255.0)).float()
+        moments = self.zernike_calculator(silhouettes)
+        edge_index = self.static_edge_index
+        src_nodes, dst_nodes = edge_index[0], edge_index[1]
         
-        if not os.path.exists(folder_name):
-            os.makedirs(folder_name, exist_ok=True)
-            
-        # images shape here is [num_views, C, H, W]
-        for view_idx, img in enumerate(images):
-            # Save format: graph_images/batch_0_view_1.png
-            file_path = os.path.join(folder_name, f"batch_{batch_idx}_view_{view_idx}.png")
-            save_image(img, file_path)
-        raise ValueError("End of images saving")
+        zernike_src = moments[src_nodes]
+        zernike_dst = moments[dst_nodes]
+        
+        dist = F.pairwise_distance(zernike_src, zernike_dst, p=2)
+        similarity = torch.exp(-dist)
 
-    def get_view_edge_index(self, images, batch_idx=0,save_image=False):
-        # 1. Save the images
-        #if save_image==True and batch_idx==1:
-        #    self.save_graph_images(images, batch_idx)
-
-        # 2. Define the connections based on geometric proximity
-        edges = [
-            # Ring connections (forming a circle around the object)
-            [4, 0], [0, 5], [5, 1], [1, 6], [6, 2], [2, 7], [7, 3], [3, 4],
-            
-            # Top camera (9) connects to all ring cameras
-            [9, 4], [9, 0], [9, 5], [9, 1], [9, 6], [9, 2], [9, 7], [9, 3],
-            
-            # Bottom camera (8) connects to all ring cameras
-            [8, 4], [8, 0], [8, 5], [8, 1], [8, 6], [8, 2], [8, 7], [8, 3]
-        ]
-        
-        # Add reverse edges for undirected graph
-        reverse_edges = [[dst, src] for src, dst in edges]
-        all_edges = edges + reverse_edges
-        
-        # Convert to PyTorch tensor
-        edge_index = torch.tensor(all_edges, dtype=torch.long).t().contiguous()
-        return edge_index.cuda()
+        return edge_index, similarity
 
     def save_gnn(self, path):
         directory = os.path.dirname(path)
         if directory: 
             os.makedirs(directory, exist_ok=True)
         torch.save(self.state_dict(), path)
-    
+
     def load_gnn(self, path):
         self.load_state_dict(torch.load(path))
+
