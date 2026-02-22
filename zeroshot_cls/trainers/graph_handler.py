@@ -145,7 +145,7 @@ class aggergator_Graph(nn.Module):
 
     def get_edges_and_attributes_gpu(self, images_batch):
         gray_images = (images_batch * self.gray_weights).sum(dim=1)
-        silhouettes = (gray_images > (10 / 255.0)).float()
+        silhouettes = (gray_images < (245 / 255.0)).float()
         moments = self.zernike_calculator(silhouettes)
         edge_index = self.static_edge_index
         src_nodes, dst_nodes = edge_index[0], edge_index[1]
